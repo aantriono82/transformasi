@@ -283,7 +283,7 @@
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Refleksi (Pencerminan)</h3>
                         
                         <div>
-                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Garis Refleksi:</label>
+                            <label for="reflectionAxis" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Garis Refleksi:</label>
                             <select id="reflectionAxis" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-primary-800 border border-primary-600 rounded-lg sm:rounded-xl text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
                                 <option value="x">Sumbu X (y = 0)</option>
                                 <option value="y">Sumbu Y (x = 0)</option>
@@ -295,7 +295,7 @@
                         
                         <div id="customReflectionParams" class="space-y-4 sm:space-y-6 hidden">
                             <div>
-                                <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Kemiringan (m):</label>
+                                <label for="reflectionM" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Kemiringan (m):</label>
                                 <div class="flex items-center gap-2 sm:gap-4">
                                     <input type="range" id="reflectionM" min="-5" max="5" step="0.1" value="1" class="flex-1">
                                     <span id="reflectionMValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">1.0</span>
@@ -303,7 +303,7 @@
                             </div>
                             
                             <div>
-                                <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Konstanta (c):</label>
+                                <label for="reflectionC" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Konstanta (c):</label>
                                 <div class="flex items-center gap-2 sm:gap-4">
                                     <input type="range" id="reflectionC" min="-200" max="200" step="1" value="0" class="flex-1">
                                     <span id="reflectionCValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">0</span>
@@ -317,7 +317,7 @@
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Rotasi (Perputaran)</h3>
                         
                         <div>
-                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Sudut Rotasi (derajat):</label>
+                            <label for="rotationAngle" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Sudut Rotasi (derajat):</label>
                             <div class="flex items-center gap-2 sm:gap-4">
                                 <input type="range" id="rotationAngle" min="0" max="360" step="1" value="90" class="flex-1">
                                 <span id="rotationAngleValue" class="text-white font-bold min-w-12 sm:min-w-16 text-center text-sm sm:text-base">90°</span>
@@ -325,7 +325,7 @@
                         </div>
                         
                         <div>
-                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Pusat Rotasi:</label>
+                            <div class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Pusat Rotasi:</div>
                             <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                                 <div>
                                     <label for="rotationCenterX" class="block text-blue-200 text-xs sm:text-sm mb-1">Pusat X:</label>
@@ -344,7 +344,7 @@
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Dilatasi (Penskalaan)</h3>
                         
                         <div>
-                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Faktor Skala:</label>
+                            <label for="scaleFactor" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Faktor Skala:</label>
                             <div class="flex items-center gap-2 sm:gap-4">
                                 <input type="range" id="scaleFactor" min="0.1" max="5" step="0.1" value="2" class="flex-1">
                                 <span id="scaleFactorValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">2.0</span>
@@ -352,7 +352,7 @@
                         </div>
                         
                         <div>
-                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Pusat Dilatasi:</label>
+                            <div class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Pusat Dilatasi:</div>
                             <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                                 <div>
                                     <label for="dilationCenterX" class="block text-blue-200 text-xs sm:text-sm mb-1">Pusat X:</label>
@@ -371,7 +371,7 @@
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Translasi (Pergeseran)</h3>
                         
                         <div>
-                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Vektor Translasi:</label>
+                            <div class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Vektor Translasi:</div>
                             <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                                 <div>
                                     <label for="translationX" class="block text-blue-200 text-xs sm:text-sm mb-1">Geser X:</label>
@@ -677,7 +677,7 @@
 </button>
 
     <!-- JavaScript -->
-    <script src="transformations.js"></script>
-    <script src="script.js"></script>
+    <script src="transformations.js" defer></script>
+    <script src="script.js" defer></script>
 </body>
 </html>

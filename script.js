@@ -37,6 +37,9 @@ const maxScale = 50;
 
 // Variabel untuk debounce resize
 let resizeTimeout;
+let redrawFrame = 0;
+let canvasWidth = 0;
+let canvasHeight = 0;
 const transformLabels = {
     reflection: 'Refleksi terhadap sumbu X',
     rotation: 'Rotasi 90° dengan pusat (0, 0)',
@@ -55,17 +58,17 @@ const transformNames = {
 // Fungsi untuk setup ukuran canvas
 function setupCanvasSize() {
     const ratio = Math.max(1, window.devicePixelRatio || 1);
-    const width = canvas.offsetWidth;
-    const height = canvas.offsetHeight;
-    canvas.width = Math.floor(width * ratio);
-    canvas.height = Math.floor(height * ratio);
+    canvasWidth = canvas.clientWidth;
+    canvasHeight = canvas.clientHeight;
+    canvas.width = Math.floor(canvasWidth * ratio);
+    canvas.height = Math.floor(canvasHeight * ratio);
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 }
 
 // Fungsi untuk mengubah koordinat dunia ke koordinat layar
 function worldToScreen(worldX, worldY) {
-    const canvasCenterX = canvas.offsetWidth / 2;
-    const canvasCenterY = canvas.offsetHeight / 2;
+    const canvasCenterX = canvasWidth / 2;
+    const canvasCenterY = canvasHeight / 2;
     const screenX = canvasCenterX + (worldX - viewOffsetX) * viewScale;
     const screenY = canvasCenterY - (worldY - viewOffsetY) * viewScale;
     return { x: screenX, y: screenY };
@@ -73,8 +76,8 @@ function worldToScreen(worldX, worldY) {
 
 // Fungsi untuk mengubah koordinat layar ke koordinat dunia
 function screenToWorld(screenX, screenY) {
-    const canvasCenterX = canvas.offsetWidth / 2;
-    const canvasCenterY = canvas.offsetHeight / 2;
+    const canvasCenterX = canvasWidth / 2;
+    const canvasCenterY = canvasHeight / 2;
     const worldX = viewOffsetX + (screenX - canvasCenterX) / viewScale;
     const worldY = viewOffsetY - (screenY - canvasCenterY) / viewScale;
     return { x: worldX, y: worldY };
@@ -301,12 +304,12 @@ function getLabelInterval() {
 // Gambar grid dan sumbu
 function drawGridAndAxes() {
     // Bersihkan canvas
-    ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
     const labelInterval = getLabelInterval();
     
-    const canvasCenterX = canvas.offsetWidth / 2;
-    const canvasCenterY = canvas.offsetHeight / 2;
+    const canvasCenterX = canvasWidth / 2;
+    const canvasCenterY = canvasHeight / 2;
     
     const leftWorld = viewOffsetX - canvasCenterX / viewScale;
     const rightWorld = viewOffsetX + canvasCenterX / viewScale;
@@ -333,7 +336,7 @@ function drawGridAndAxes() {
         
         ctx.beginPath();
         ctx.moveTo(screenPos.x, 0);
-        ctx.lineTo(screenPos.x, canvas.offsetHeight);
+        ctx.lineTo(screenPos.x, canvasHeight);
         ctx.stroke();
     }
     
@@ -353,7 +356,7 @@ function drawGridAndAxes() {
         
         ctx.beginPath();
         ctx.moveTo(0, screenPos.y);
-        ctx.lineTo(canvas.offsetWidth, screenPos.y);
+        ctx.lineTo(canvasWidth, screenPos.y);
         ctx.stroke();
     }
     
@@ -366,7 +369,7 @@ function drawGridAndAxes() {
     const xAxisEnd = worldToScreen(rightWorld, 0);
     ctx.beginPath();
     ctx.moveTo(0, xAxisStart.y);
-    ctx.lineTo(canvas.offsetWidth, xAxisEnd.y);
+    ctx.lineTo(canvasWidth, xAxisEnd.y);
     ctx.stroke();
     
     // Sumbu Y
@@ -374,14 +377,14 @@ function drawGridAndAxes() {
     const yAxisEnd = worldToScreen(0, bottomWorld);
     ctx.beginPath();
     ctx.moveTo(yAxisStart.x, 0);
-    ctx.lineTo(yAxisEnd.x, canvas.offsetHeight);
+    ctx.lineTo(yAxisEnd.x, canvasHeight);
     ctx.stroke();
     
     // Panah sumbu X
     ctx.beginPath();
-    ctx.moveTo(canvas.offsetWidth - 10, xAxisEnd.y - 5);
-    ctx.lineTo(canvas.offsetWidth, xAxisEnd.y);
-    ctx.lineTo(canvas.offsetWidth - 10, xAxisEnd.y + 5);
+    ctx.moveTo(canvasWidth - 10, xAxisEnd.y - 5);
+    ctx.lineTo(canvasWidth, xAxisEnd.y);
+    ctx.lineTo(canvasWidth - 10, xAxisEnd.y + 5);
     ctx.fillStyle = '#333';
     ctx.fill();
     
@@ -396,12 +399,12 @@ function drawGridAndAxes() {
     ctx.fillStyle = '#333';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('X', canvas.offsetWidth - 20, xAxisEnd.y - 10);
+    ctx.fillText('X', canvasWidth - 20, xAxisEnd.y - 10);
     ctx.fillText('Y', yAxisStart.x + 10, 20);
     
     // Label titik asal (0,0)
     const origin = worldToScreen(0, 0);
-    if (origin.x > 15 && origin.x < canvas.offsetWidth - 15 && origin.y > 15 && origin.y < canvas.offsetHeight - 15) {
+    if (origin.x > 15 && origin.x < canvasWidth - 15 && origin.y > 15 && origin.y < canvasHeight - 15) {
         ctx.font = 'bold 13px Arial';
         ctx.textAlign = 'left';
         ctx.fillText('(0,0)', origin.x + 10, origin.y - 10);
@@ -420,7 +423,7 @@ function drawGridAndAxes() {
         
         const screenPos = worldToScreen(worldX, 0);
         
-        if (screenPos.x > 30 && screenPos.x < canvas.offsetWidth - 30) {
+        if (screenPos.x > 30 && screenPos.x < canvasWidth - 30) {
             ctx.beginPath();
             ctx.moveTo(screenPos.x, screenPos.y - 5);
             ctx.lineTo(screenPos.x, screenPos.y + 5);
@@ -443,7 +446,7 @@ function drawGridAndAxes() {
         
         const screenPos = worldToScreen(0, worldY);
         
-        if (screenPos.y > 20 && screenPos.y < canvas.offsetHeight - 20) {
+        if (screenPos.y > 20 && screenPos.y < canvasHeight - 20) {
             ctx.beginPath();
             ctx.moveTo(screenPos.x - 5, screenPos.y);
             ctx.lineTo(screenPos.x + 5, screenPos.y);
@@ -705,8 +708,8 @@ function handleCanvasWheel(event) {
 
 // Fungsi zoom dengan faktor tertentu
 function zoom(factor) {
-    const centerX = canvas.offsetWidth / 2;
-    const centerY = canvas.offsetHeight / 2;
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
     
     const worldPosBeforeZoom = screenToWorld(centerX, centerY);
     
@@ -844,8 +847,12 @@ function drawPoints() {
 
 // Gambar ulang seluruh canvas
 function redrawCanvas() {
-    drawGridAndAxes();
-    drawPoints();
+    if (redrawFrame) return;
+    redrawFrame = requestAnimationFrame(() => {
+        redrawFrame = 0;
+        drawGridAndAxes();
+        drawPoints();
+    });
 }
 
 // ==================== FUNGSI TRANSFORMASI ====================

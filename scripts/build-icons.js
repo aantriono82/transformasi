@@ -10,7 +10,7 @@ const targetFonts = path.join(targetRoot, 'webfonts');
 
 fs.mkdirSync(targetFonts, { recursive: true });
 let css = fs.readFileSync(sourceCss, 'utf8');
-css = css.replaceAll('../webfonts/', 'webfonts/');
+css = css.replaceAll('../webfonts/', 'webfonts/').replaceAll('font-display:block', 'font-display:swap');
 fs.writeFileSync(path.join(targetRoot, 'fontawesome.min.css'), css);
 
 for (const file of fs.readdirSync(sourceFonts)) {
