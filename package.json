@@ -6,8 +6,9 @@
   "scripts": {
     "check": "node --check script.js && node --check transformations.js",
     "test": "node --test tests/*.test.js",
+    "build:icons": "cp node_modules/@fortawesome/fontawesome-free/css/all.min.css assets/fontawesome.min.css && mkdir -p assets/webfonts && cp -R node_modules/@fortawesome/fontawesome-free/webfonts/. assets/webfonts/ && sed -i 's#../webfonts/#webfonts/#g' assets/fontawesome.min.css",
     "build:css": "tailwindcss -i ./src/tailwind.css -o ./assets/app.css --minify",
-    "build": "npm run build:css && npm run check && npm test"
+    "build": "npm run build:icons && npm run build:css && npm run check && npm test"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"

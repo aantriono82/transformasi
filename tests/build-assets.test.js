@@ -7,6 +7,8 @@ test('index memakai aset lokal untuk stylesheet runtime', () => {
     assert.match(html, /assets\/app\.css/);
     assert.match(html, /assets\/fontawesome\.min\.css/);
     assert.doesNotMatch(html, /cdn\.tailwindcss\.com|fonts\.googleapis\.com|cdnjs\.cloudflare\.com/);
+    assert.match(fs.readFileSync('assets/fontawesome.min.css', 'utf8'), /url\(webfonts\/fa-solid-900\.woff2\)/);
+    assert.doesNotMatch(fs.readFileSync('assets/fontawesome.min.css', 'utf8'), /url\(\.\.\/webfonts\//);
 });
 
 test('hasil build CSS dan font lokal tersedia', () => {
