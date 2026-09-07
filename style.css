@@ -640,9 +640,9 @@ button:disabled {
 
 .back-to-top-btn {
     position: fixed;
-    right: 1.25rem;
-    bottom: 1.25rem;
-    z-index: 20;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    z-index: 100 !important;
     display: grid;
     width: 2.75rem;
     height: 2.75rem;
@@ -658,6 +658,40 @@ button:disabled {
     transition: opacity 160ms ease, transform 160ms ease, background-color 160ms ease;
 }
 
+.share-glyph,
+.back-to-top-glyph,
+.footer-heart {
+    display: inline-grid;
+    place-items: center;
+    color: currentColor;
+    font-family: Arial, sans-serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.footer-heart {
+    color: #f87171;
+    font-size: 1rem;
+}
+
+.share-glyph-letter {
+    font-family: Arial, sans-serif;
+    font-size: 1.55rem;
+    text-transform: lowercase;
+}
+
+.back-to-top-glyph {
+    font-size: 1.65rem;
+    transform: translateY(-1px);
+}
+
+.share-btn {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 3rem;
+}
+
 .back-to-top-btn.show {
     opacity: 1;
     pointer-events: auto;
@@ -671,5 +705,11 @@ button:disabled {
 @media (max-width: 640px) {
     .canvas-status {
         font-size: 0.6875rem;
+    }
+
+    .share-btn {
+        flex-basis: 2.75rem;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
     }
 }
