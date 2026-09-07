@@ -1,0 +1,496 @@
+/* style.css - Enhanced Responsive Version */
+
+/* ========== BASE STYLES ========== */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Animasi kelas untuk Tailwind */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.4s ease-out;
+}
+
+/* ========== MODAL STYLES ========== */
+.modal {
+    backdrop-filter: blur(5px);
+}
+
+/* Animasi untuk modal */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes modalFadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+/* Modal yang terbuka */
+#helpModal:not(.hidden) {
+    display: flex !important;
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+#helpModal:not(.hidden) .modal-content {
+    animation: modalFadeIn 0.4s ease-out;
+}
+
+/* Modal yang sedang ditutup */
+#helpModal.closing {
+    animation: modalFadeOut 0.3s ease-out;
+}
+
+/* Pastikan teks di modal terlihat */
+#helpModal h2,
+#helpModal h3,
+#helpModal p,
+#helpModal li,
+#helpModal span:not(.close-modal) {
+    color: inherit !important;
+}
+
+/* Kontras yang lebih baik untuk teks di modal */
+#helpModal .text-blue-900 {
+    color: #1e3a8a !important;
+}
+
+#helpModal .text-gray-800 {
+    color: #374151 !important;
+}
+
+/* Background untuk code blocks */
+#helpModal code {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+    color: #1e3a8a !important;
+    font-weight: 600;
+    border: 1px solid #93c5fd;
+}
+
+/* ========== CANVAS STYLES ========== */
+canvas {
+    touch-action: none;
+    image-rendering: crisp-edges;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ========== SCROLLBAR STYLING ========== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(30, 58, 138, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #2563eb, #1e3a8a);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 rgba(30, 58, 138, 0.1);
+}
+
+/* ========== TEMPORARY MESSAGE ========== */
+.temp-message {
+    animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+}
+
+/* ========== TRANSFORM BUTTON STYLES ========== */
+/* Efek untuk tombol transformasi aktif */
+.active-transform {
+    position: relative;
+    z-index: 1;
+    border-color: #f59e0b !important;
+    border-width: 2px !important;
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(37, 99, 235, 0.9)) !important;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.5) !important;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+    animation: pulse-orange 2s infinite;
+}
+
+/* Efek hover untuk semua tombol transformasi */
+.transform-btn:hover {
+    border-color: rgba(245, 158, 11, 0.5) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Style khusus untuk border oranye */
+.border-orange-active {
+    border-color: #f59e0b !important;
+    border-width: 2px !important;
+}
+
+/* Animation for active button */
+@keyframes pulse-orange {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(245, 158, 11, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+    }
+}
+
+.transform-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.transform-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.transform-btn:hover::before {
+    left: 100%;
+}
+
+.active-transform::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #f59e0b, #ff9800, #f59e0b);
+    border-radius: inherit;
+    z-index: -1;
+    animation: border-glow 3s linear infinite;
+}
+
+@keyframes border-glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.transform-btn * {
+    position: relative;
+    z-index: 2;
+}
+
+/* ========== FOOTER STYLES ========== */
+footer {
+    position: relative;
+    z-index: 10;
+}
+
+/* Pulsing heart animation */
+@keyframes heartbeat {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.fa-heart {
+    animation: heartbeat 1.5s infinite ease-in-out;
+}
+
+/* Gradient text untuk copyright */
+.gradient-text {
+    background: linear-gradient(135deg, #bbdefb, #e3f2fd, #bbdefb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* ========== RESPONSIVE BREAKPOINTS ========== */
+
+/* Mobile Small (< 475px) */
+@media (max-width: 475px) {
+    .transform-btn {
+        padding: 0.625rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .transform-btn i {
+        font-size: 1rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    canvas {
+        border-radius: 0.5rem !important;
+    }
+    
+    #helpModal .bg-white {
+        border-radius: 0.5rem !important;
+        margin: 0.5rem !important;
+    }
+}
+
+/* Mobile Medium (476px - 640px) */
+@media (min-width: 476px) and (max-width: 640px) {
+    .transform-btn {
+        padding: 0.75rem !important;
+    }
+    
+    canvas {
+        border-radius: 0.75rem !important;
+    }
+}
+
+/* Tablet Portrait (641px - 768px) */
+@media (min-width: 641px) and (max-width: 768px) {
+    .transform-btn {
+        padding: 0.875rem !important;
+    }
+}
+
+/* Tablet Landscape (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .transform-btn {
+        padding: 1rem !important;
+    }
+    
+    canvas {
+        border-radius: 1rem !important;
+    }
+}
+
+/* Desktop (1025px - 1440px) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    .container {
+        max-width: 1280px;
+    }
+}
+
+/* Large Desktop (1441px - 1920px) */
+@media (min-width: 1441px) and (max-width: 1920px) {
+    .container {
+        max-width: 1536px;
+    }
+}
+
+/* Extra Large Desktop (> 1920px) */
+@media (min-width: 1921px) {
+    .container {
+        max-width: 1920px;
+    }
+    
+    canvas {
+        min-height: 600px !important;
+    }
+}
+
+/* ========== LANDSCAPE ORIENTATION ========== */
+@media (max-width: 896px) and (orientation: landscape) {
+    header {
+        padding: 0.75rem 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    header h1 {
+        font-size: 1.25rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    header p {
+        font-size: 0.875rem !important;
+    }
+    
+    canvas {
+        min-height: 200px !important;
+        max-height: 250px !important;
+    }
+    
+    .back-to-top-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* ========== MOBILE SPECIFIC ========== */
+@media (max-width: 768px) {
+    /* Better button spacing */
+    .action-btn {
+        padding: 0.625rem 0.75rem !important;
+        font-size: 0.8125rem !important;
+    }
+    
+    /* Improved table readability */
+    #coordinateTable th,
+    #coordinateTable td {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.8125rem !important;
+    }
+    
+    /* Better form controls */
+    input[type="range"] {
+        height: 2.5rem;
+    }
+    
+    select {
+        padding: 0.75rem !important;
+        background-position: right 0.5rem center;
+    }
+    
+    /* Improved modal on mobile */
+    #helpModal .bg-white {
+        max-width: 100%;
+        margin: 0.5rem;
+        max-height: 90vh;
+    }
+    
+    #helpModal h2 {
+        font-size: 1.25rem !important;
+    }
+    
+    #helpModal h3 {
+        font-size: 1rem !important;
+    }
+    
+    #helpModal p,
+    #helpModal li {
+        font-size: 0.875rem !important;
+    }
+}
+
+/* ========== DARK MODE ENFORCEMENT ========== */
+@media (prefers-color-scheme: light) {
+    body {
+        background: linear-gradient(to bottom right, #1e3a8a, #1e40af, #1e3a8a) !important;
+    }
+}
+
+/* ========== HIGH CONTRAST MODE ========== */
+@media (prefers-contrast: high) {
+    button,
+    .transform-btn,
+    .action-btn {
+        border-width: 3px !important;
+    }
+    
+    canvas {
+        border: 2px solid #fff;
+    }
+}
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    .back-to-top-btn {
+        transition: none !important;
+    }
+}
+
+/* ========== PRINT OPTIMIZATION ========== */
+@media print {
+    .no-print,
+    footer,
+    .back-to-top-btn,
+    #helpBtn,
+    .share-btn,
+    button {
+        display: none !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+    
+    canvas {
+        border: 2px solid #000;
+        page-break-inside: avoid;
+    }
+    
+    header {
+        background: #e5e7eb !important;
+        color: #000 !important;
+        border: 2px solid #000;
+    }
+    
+    #coordinateTable {
+        border: 2px solid #000;
+    }
+    
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

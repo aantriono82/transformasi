@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Aplikasi Geometri Transformasi</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    screens: {
+                        'xs': '475px',
+                        '3xl': '1920px',
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        secondary: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
+                    },
+                    fontSize: {
+                        'xxs': '0.625rem',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Responsive Meta Tags -->
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- index.html - Tambahkan di dalam <head> setelah meta tags yang sudah ada -->
+
+<!-- Meta Tags untuk Sharing di Media Sosial -->
+<meta property="og:title" content="Aplikasi Geometri Transformasi - Visualisasi Interaktif">
+<meta property="og:description" content="Belajar transformasi geometri (refleksi, rotasi, dilatasi, translasi) dengan visualisasi interaktif dan real-time.">
+<meta property="og:image" content="https://aantriono.github.io/geometri-transformasi/share-image.png">
+<meta property="og:url" content="https://aantriono.github.io/geometri-transformasi">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Aplikasi Geometri Transformasi">
+<meta property="og:locale" content="id_ID">
+
+<!-- Twitter Card Tags -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Aplikasi Geometri Transformasi - Visualisasi Interaktif">
+<meta name="twitter:description" content="Belajar transformasi geometri dengan visualisasi interaktif dan real-time.">
+<meta name="twitter:image" content="https://aantriono.github.io/geometri-transformasi/share-image.png">
+<meta name="twitter:site" content="@aantriono">
+
+<!-- Additional Meta Tags -->
+<meta name="description" content="Aplikasi pembelajaran transformasi geometri dengan visualisasi interaktif.">
+<meta name="keywords" content="geometri, transformasi, matematika, pendidikan, refleksi, rotasi, dilatasi, translasi, visualisasi, interaktif">
+<meta name="author" content="Aan Triono">
+
+<!-- Apple Touch Icon -->
+<link rel="apple-touch-icon" sizes="180x180" href="https://aantriono.github.io/geometri-transformasi/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://aantriono.github.io/geometri-transformasi/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="https://aantriono.github.io/geometri-transformasi/favicon-16x16.png">
+
+    <style>
+        /* Touch-friendly tap targets */
+        @media (max-width: 768px) {
+            button, 
+            .transform-btn, 
+            .action-btn,
+            input[type="range"],
+            select {
+                min-height: 44px;
+            }
+            
+            /* Prevent zoom on input focus in iOS */
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Optimize for tablet */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .tablet\:text-lg {
+                font-size: 1.125rem !important;
+            }
+            
+            .tablet\:p-5 {
+                padding: 1.25rem !important;
+            }
+        }
+        
+        /* High-resolution displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            canvas {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+            }
+        }
+        
+        /* Print styles */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            .print\:block {
+                display: block !important;
+            }
+            
+            body {
+                background: white !important;
+                color: black !important;
+            }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .dark\:bg-gray-900 {
+                background-color: #111827 !important;
+            }
+        }
+    </style>
+   
+</head>
+
+<body class="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-950 text-gray-100 min-h-screen font-sans">
+    <div class="container mx-auto px-3 xs:px-4 sm:px-6 py-4 sm:py-6 max-w-7xl">
+        <!-- Header - Responsive -->
+        <header class="text-center mb-6 sm:mb-8 md:mb-10 p-4 sm:p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-primary-800 shadow-xl border border-primary-400/30">
+            <h1 class="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 text-white flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+                <i class="fas fa-shapes text-secondary-500 text-3xl sm:text-4xl"></i> 
+                <span>Aplikasi Geometri Transformasi</span>
+            </h1>
+            <p class="text-base sm:text-lg md:text-xl text-blue-100 mb-2">Visualisasi interaktif untuk memahami transformasi geometri</p>
+            <p class="text-sm sm:text-base md:text-lg text-yellow-200 flex items-center justify-center gap-2">
+                <i class="fas fa-laptop"></i>
+                <span class="hidden xs:inline">Gunakan Laptop untuk mendapatkan hasil lebih baik</span>
+                <span class="xs:hidden">Optimal di Laptop</span>
+            </p>
+        </header>
+        
+        <!-- Main Content - Responsive Layout -->
+        <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10">
+            <!-- Visualization Section -->
+            <section class="lg:w-2/3 bg-gradient-to-br from-primary-800 to-primary-900 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border border-primary-400/20">
+                <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white flex items-center">
+                    <i class="fas fa-eye text-secondary-500 mr-2 sm:mr-3 text-lg sm:text-xl"></i> 
+                    Visualisasi Transformasi
+                </h2>
+                
+                <!-- Canvas Container with Responsive Height -->
+                <div class="bg-white rounded-lg md:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-inner">
+                    <canvas id="transformCanvas" class="w-full h-48 xs:h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96 rounded"></canvas>
+                </div>
+                
+                <!-- Canvas Controls - Responsive -->
+                <div class="flex flex-col xs:flex-row flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <button id="resetView" class="flex-1 xs:flex-none px-3 py-2.5 sm:px-4 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg sm:rounded-xl font-medium flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
+                        <i class="fas fa-crosshairs mr-2 text-xs sm:text-sm"></i> 
+                        <span class="truncate">Reset Tampilan</span>
+                    </button>
+                    <button id="zoomIn" class="flex-1 xs:flex-none px-3 py-2.5 sm:px-4 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg sm:rounded-xl font-medium flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
+                        <i class="fas fa-search-plus mr-2 text-xs sm:text-sm"></i> 
+                        <span class="truncate">Perbesar</span>
+                    </button>
+                    <button id="zoomOut" class="flex-1 xs:flex-none px-3 py-2.5 sm:px-4 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg sm:rounded-xl font-medium flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
+                        <i class="fas fa-search-minus mr-2 text-xs sm:text-sm"></i> 
+                        <span class="truncate">Perkecil</span>
+                    </button>
+                    <div class="w-full xs:w-auto xs:flex-1 flex items-center text-xs xs:text-sm text-blue-200 mt-2 xs:mt-0 px-2">
+                        <i class="fas fa-info-circle text-secondary-500 mr-2 text-xs sm:text-sm"></i>
+                        <span class="truncate hidden xs:inline">Klik kanan+tahan: geser | Scroll: zoom</span>
+                        <span class="truncate xs:hidden">Tap+geser: geser | Pinch: zoom</span>
+                    </div>
+                </div>
+                
+                <!-- Manual Point Input - Responsive -->
+                <div class="bg-primary-700/50 rounded-xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 border border-primary-400/20">
+                    <h3 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white flex items-center">
+                        <i class="fas fa-keyboard text-secondary-500 mr-2 sm:mr-3"></i> Input Titik Manual
+                    </h3>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                        <div class="flex-1">
+                            <label for="manualPointInput" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Masukkan titik (x, y):</label>
+                            <input type="text" id="manualPointInput" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-primary-800 border-2 border-primary-500 rounded-lg sm:rounded-xl text-white placeholder-blue-300 focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base" 
+                                   placeholder="Contoh: (3, 5)">
+                        </div>
+                        <div class="flex items-end">
+                            <button id="addManualPoint" class="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-600 hover:to-secondary-700 text-white font-bold rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
+                                <i class="fas fa-plus-circle mr-2"></i> 
+                                <span class="whitespace-nowrap">Tambah Titik</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="text-xs sm:text-sm text-blue-200">
+                        <p class="font-medium mb-1">Format yang diterima:</p>
+                        <div class="flex flex-wrap gap-1 sm:gap-2">
+                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">(3, 5)</span>
+                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">2, -4</span>
+                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">A(1,2)</span>
+                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">x=3 y=5</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Legend - Responsive -->
+                <div class="flex flex-col xs:flex-row justify-center gap-3 xs:gap-4 sm:gap-6 md:gap-8 mb-4 sm:mb-6 flex-wrap">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-blue-500 rounded mr-2 sm:mr-3 shadow"></div>
+                        <span class="text-white font-medium text-sm sm:text-base">Bentuk Asli</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-secondary-500 rounded mr-2 sm:mr-3 shadow"></div>
+                        <span class="text-white font-medium text-sm sm:text-base">Hasil Transformasi</span>
+                    </div>
+                </div>
+                
+                <!-- Instructions - Responsive -->
+                <p class="text-blue-200 text-center mb-6 text-xs sm:text-sm md:text-base leading-relaxed px-2">
+                    Gunakan input manual untuk menambahkan titik. Tekan "Tutup Poligon" untuk menyelesaikan bentuk.
+                    <span class="hidden sm:inline">Gunakan klik kanan + drag untuk menggeser dan scroll untuk zoom.</span>
+                </p>
+                
+                <!-- Coordinate Table - Responsive with Scroll -->
+                <div>
+                    <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-white flex items-center">
+                        <i class="fas fa-table text-secondary-500 mr-2 sm:mr-3"></i> Koordinat Titik
+                    </h3>
+                    
+                    <div class="bg-primary-800/40 rounded-lg md:rounded-xl p-3 sm:p-4 border border-primary-500/30">
+                        <div class="overflow-x-auto -mx-2 sm:mx-0">
+                            <div class="min-w-[500px] sm:min-w-0">
+                                <table id="coordinateTable" class="w-full text-white text-sm sm:text-base">
+                                    <thead class="bg-primary-700">
+                                        <tr>
+                                            <th class="py-2 sm:py-3 px-3 sm:px-4 text-left font-bold rounded-tl-lg sm:rounded-tl-xl">Titik</th>
+                                            <th class="py-2 sm:py-3 px-3 sm:px-4 text-left font-bold">Koordinat Asli</th>
+                                            <th class="py-2 sm:py-3 px-3 sm:px-4 text-left font-bold rounded-tr-lg sm:rounded-tr-xl">Koordinat Hasil</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="coordinateTableBody" class="bg-primary-900/50 divide-y divide-primary-700/50">
+                                        <tr>
+                                            <td colspan="3" class="py-4 sm:py-6 text-center text-blue-300 text-sm sm:text-base">
+                                                Belum ada titik. Tambahkan titik menggunakan input manual di atas.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Controls Section - Responsive -->
+            <section class="lg:w-1/3 bg-primary-800/70 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border border-primary-400/20">
+                <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white flex items-center">
+                    <i class="fas fa-sliders-h text-secondary-500 mr-2 sm:mr-3 text-lg sm:text-xl"></i> Kontrol Transformasi
+                </h2>
+                
+                <!-- Transform Type Selector - Responsive Grid -->
+<div class="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
+    <!-- Refleksi Button - Default Active -->
+    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-secondary-500 rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 shadow-md active-transform" data-transform="reflection">
+        <i class="fas fa-exchange-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
+        <span class="text-xs sm:text-sm md:text-base">Refleksi</span>
+    </div>
+    
+    <!-- Rotasi Button -->
+    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="rotation">
+        <i class="fas fa-sync-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
+        <span class="text-xs sm:text-sm md:text-base">Rotasi</span>
+    </div>
+    
+    <!-- Dilatasi Button -->
+    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="dilation">
+        <i class="fas fa-expand-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
+        <span class="text-xs sm:text-sm md:text-base">Dilatasi</span>
+    </div>
+    
+    <!-- Translasi Button -->
+    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="translation">
+        <i class="fas fa-arrows-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
+        <span class="text-xs sm:text-sm md:text-base">Translasi</span>
+    </div>
+</div>
+                
+                <!-- Parameters Container - Responsive -->
+                <div class="bg-primary-900/60 rounded-xl p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 border border-primary-500/30">
+                    <!-- Reflection Parameters -->
+                    <div id="reflection-params" class="transform-params space-y-4 sm:space-y-6">
+                        <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Refleksi (Pencerminan)</h3>
+                        
+                        <div>
+                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Garis Refleksi:</label>
+                            <select id="reflectionAxis" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-primary-800 border border-primary-600 rounded-lg sm:rounded-xl text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                <option value="x">Sumbu X (y = 0)</option>
+                                <option value="y">Sumbu Y (x = 0)</option>
+                                <option value="y=x">Garis y = x</option>
+                                <option value="y=-x">Garis y = -x</option>
+                                <option value="custom">Garis Kustom (y = mx + c)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="customReflectionParams" class="space-y-4 sm:space-y-6 hidden">
+                            <div>
+                                <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Kemiringan (m):</label>
+                                <div class="flex items-center gap-2 sm:gap-4">
+                                    <input type="range" id="reflectionM" min="-5" max="5" step="0.1" value="1" class="flex-1">
+                                    <span id="reflectionMValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">1.0</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Konstanta (c):</label>
+                                <div class="flex items-center gap-2 sm:gap-4">
+                                    <input type="range" id="reflectionC" min="-200" max="200" step="1" value="0" class="flex-1">
+                                    <span id="reflectionCValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Rotation Parameters -->
+                    <div id="rotation-params" class="transform-params space-y-4 sm:space-y-6 hidden">
+                        <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Rotasi (Perputaran)</h3>
+                        
+                        <div>
+                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Sudut Rotasi (derajat):</label>
+                            <div class="flex items-center gap-2 sm:gap-4">
+                                <input type="range" id="rotationAngle" min="0" max="360" step="1" value="90" class="flex-1">
+                                <span id="rotationAngleValue" class="text-white font-bold min-w-12 sm:min-w-16 text-center text-sm sm:text-base">90°</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Pusat Rotasi:</label>
+                            <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                                <div>
+                                    <label for="rotationCenterX" class="block text-blue-200 text-xs sm:text-sm mb-1">Pusat X:</label>
+                                    <input type="number" id="rotationCenterX" value="0" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                </div>
+                                <div>
+                                    <label for="rotationCenterY" class="block text-blue-200 text-xs sm:text-sm mb-1">Pusat Y:</label>
+                                    <input type="number" id="rotationCenterY" value="0" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dilation Parameters -->
+                    <div id="dilation-params" class="transform-params space-y-4 sm:space-y-6 hidden">
+                        <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Dilatasi (Penskalaan)</h3>
+                        
+                        <div>
+                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Faktor Skala:</label>
+                            <div class="flex items-center gap-2 sm:gap-4">
+                                <input type="range" id="scaleFactor" min="0.1" max="5" step="0.1" value="2" class="flex-1">
+                                <span id="scaleFactorValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">2.0</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Pusat Dilatasi:</label>
+                            <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                                <div>
+                                    <label for="dilationCenterX" class="block text-blue-200 text-xs sm:text-sm mb-1">Pusat X:</label>
+                                    <input type="number" id="dilationCenterX" value="0" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                </div>
+                                <div>
+                                    <label for="dilationCenterY" class="block text-blue-200 text-xs sm:text-sm mb-1">Pusat Y:</label>
+                                    <input type="number" id="dilationCenterY" value="0" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Translation Parameters -->
+                    <div id="translation-params" class="transform-params space-y-4 sm:space-y-6 hidden">
+                        <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Translasi (Pergeseran)</h3>
+                        
+                        <div>
+                            <label class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Vektor Translasi:</label>
+                            <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                                <div>
+                                    <label for="translationX" class="block text-blue-200 text-xs sm:text-sm mb-1">Geser X:</label>
+                                    <input type="number" id="translationX" value="50" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                </div>
+                                <div>
+                                    <label for="translationY" class="block text-blue-200 text-xs sm:text-sm mb-1">Geser Y:</label>
+                                    <input type="number" id="translationY" value="30" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Apply Transform Button - Responsive -->
+                <button id="applyTransform" class="w-full bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-600 hover:to-secondary-700 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-lg mb-4 sm:mb-6 text-base sm:text-lg">
+                    <i class="fas fa-play-circle mr-2 sm:mr-3"></i> 
+                    <span class="whitespace-nowrap">Terapkan Transformasi</span>
+                </button>
+                
+                <!-- Action Buttons - Responsive Grid -->
+                <div class="space-y-3 sm:space-y-4">
+                    <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                        <button id="clearPoints" class="action-btn bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
+                            <i class="fas fa-eraser mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
+                            <span class="truncate">Hapus Titik</span>
+                        </button>
+                        <button id="closePolygon" class="action-btn bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
+                            <i class="fas fa-draw-polygon mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
+                            <span class="truncate">Tutup Poligon</span>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                        <button id="resetTransform" class="action-btn reset bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
+                            <i class="fas fa-undo mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
+                            <span class="truncate">Reset</span>
+                        </button>
+                        <button id="sampleShape" class="action-btn bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
+                            <i class="fas fa-star mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
+                            <span class="truncate">Contoh Bentuk</span>
+                        </button>
+                    </div>
+                    
+                    <button id="helpBtn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-lg flex items-center justify-center text-base sm:text-lg">
+                        <i class="fas fa-question-circle mr-2 sm:mr-3"></i> 
+                        <span class="whitespace-nowrap">Petunjuk Penggunaan</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Footer -->
+    <footer class="text-center mt-8 sm:mt-10 p-5 sm:p-7 rounded-xl md:rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-primary-800 shadow-2xl border border-primary-400/30 relative overflow-hidden">
+  <!-- Decorative element like header -->
+  <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-50"></div>
+  
+  <p class="text-blue-100 mb-3 text-sm">&copy; 2025 | All Right Reserved</p>
+  
+  <div class="flex items-center justify-center gap-2 text-blue-50 mb-6">
+    <span class="text-sm">Dibuat dengan</span>
+    <i class="fas fa-heart text-red-400"></i>
+    <span class="text-sm">oleh Aan Triono</span>
+  </div>
+  
+  <!-- Share Buttons - New Addition -->
+  <div class="flex flex-wrap justify-center items-center gap-3 sm:gap-4 mb-4">
+    <!-- WhatsApp -->
+    <a href="#" id="share-whatsapp" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-green-400/50 backdrop-blur-sm" 
+       title="Bagikan ke WhatsApp" aria-label="Bagikan ke WhatsApp">
+      <i class="fab fa-whatsapp text-lg sm:text-xl group-hover:animate-bounce"></i>
+    </a>
+    
+    <!-- Facebook -->
+    <a href="#" id="share-facebook" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-blue-500/50 backdrop-blur-sm" 
+       title="Bagikan ke Facebook" aria-label="Bagikan ke Facebook">
+      <i class="fab fa-facebook-f text-lg sm:text-xl group-hover:animate-bounce"></i>
+    </a>
+    
+    <!-- Twitter/X -->
+    <a href="#" id="share-twitter" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-red-500 hover:bg-sky-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-sky-400/50 backdrop-blur-sm" 
+       title="Bagikan ke Twitter" aria-label="Bagikan ke Twitter">
+      <i class="fab fa-twitter text-lg sm:text-xl group-hover:animate-bounce"></i>
+    </a>
+    
+    <!-- Telegram -->
+    <a href="#" id="share-telegram" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-blue-400 hover:bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-blue-400/50 backdrop-blur-sm" 
+       title="Bagikan ke Telegram" aria-label="Bagikan ke Telegram">
+      <i class="fab fa-telegram-plane text-lg sm:text-xl group-hover:animate-bounce"></i>
+    </a>
+    
+    <!-- Copy Link -->
+    <button id="share-copy" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-purple-600 hover:bg-gray-700 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-gray-500/50 backdrop-blur-sm" 
+            title="Salin Tautan" aria-label="Salin Tautan">
+      <i class="fas fa-link text-lg sm:text-xl group-hover:animate-bounce"></i>
+      <i class="fas fa-check hidden text-green-400 text-sm absolute inset-0 m-auto group-hover:hidden"></i>
+    </button>
+  </div>
+  
+
+  
+  <!-- Share Label 
+  <p class="text-xs sm:text-sm text-blue-200 font-medium">Bagikan Aplikasi Geometri Transformasi</p> -->
+</footer>
+
+
+   <!-- Modal Petunjuk Penggunaan - Responsive dengan Konten Lengkap -->
+<div id="helpModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-lg md:rounded-xl lg:rounded-2xl shadow-2xl w-full max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-3xl xl:max-w-4xl max-h-[90vh] overflow-hidden border-2 sm:border-4 border-blue-400">
+        <!-- Modal Header -->
+        <div class="bg-gradient-to-r from-blue-800 via-blue-700 to-blue-600 p-4 sm:p-6 border-b-2 sm:border-b-4 border-blue-500">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white flex items-center">
+                    <i class="fas fa-question-circle text-yellow-300 mr-2 sm:mr-3 sm:text-xl md:text-2xl"></i> 
+                    <span class="text-white drop-shadow-md">Petunjuk Penggunaan</span>
+                </h2>
+                <button class="close-modal bg-white/20 hover:bg-white text-white hover:text-blue-800 text-xl sm:text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300">
+                    &times;
+                </button>
+            </div>
+        </div>
+        
+        <!-- Modal Body dengan Konten Lengkap -->
+        <div class="p-3 sm:p-4 md:p-6 overflow-y-auto max-h-[60vh] sm:max-h-[65vh] bg-gradient-to-b from-blue-50 to-white">
+            <!-- Interaksi dengan Canvas -->
+            <div class="mb-4 sm:mb-6 bg-white p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl shadow border-l-4 border-blue-500">
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-blue-900 mb-2 sm:mb-3 flex items-center">
+                    <i class="fas fa-mouse-pointer text-blue-600 bg-blue-100 p-2 sm:p-3 rounded-lg mr-2 sm:mr-3 text-sm sm:text-base"></i> 
+                    Interaksi dengan Canvas
+                </h3>
+                <ul class="space-y-2 text-gray-800 text-sm sm:text-base">
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Klik Kanan + Drag:</strong> Menggeser tampilan koordinat (pan)</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Scroll Mouse:</strong> Memperbesar/memperkecil tampilan (zoom)</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Pinch (Mobile):</strong> Gunakan dua jari untuk zoom</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Drag (Mobile):</strong> Gunakan satu jari untuk menggeser</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Menambahkan Titik -->
+            <div class="mb-4 sm:mb-6 bg-white p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl shadow border-l-4 border-blue-500">
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-blue-900 mb-2 sm:mb-3 flex items-center">
+                    <i class="fas fa-keyboard text-blue-600 bg-blue-100 p-2 sm:p-3 rounded-lg mr-2 sm:mr-3 text-sm sm:text-base"></i> 
+                    Menambahkan Titik
+                </h3>
+                <ul class="space-y-2 text-gray-800 text-sm sm:text-base mb-3">
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span>Gunakan input manual di panel visualisasi</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Format yang diterima:</strong></span>
+                    </li>
+                </ul>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <div class="flex flex-wrap gap-1 sm:gap-2">
+                        <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">(3, 5)</code>
+                        <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">2, -4</code>
+                        <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">A(1,2)</code>
+                        <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">x=3 y=5</code>
+                        <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">2 -4</code>
+                        <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">5; -2</code>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Membuat Poligon -->
+            <div class="mb-4 sm:mb-6 bg-white p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl shadow border-l-4 border-blue-500">
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-blue-900 mb-2 sm:mb-3 flex items-center">
+                    <i class="fas fa-shapes text-blue-600 bg-blue-100 p-2 sm:p-3 rounded-lg mr-2 sm:mr-3 text-sm sm:text-base"></i> 
+                    Membuat Poligon
+                </h3>
+                <ol class="space-y-2 text-gray-800 text-sm sm:text-base list-decimal pl-5">
+                    <li class="pl-2">Tambahkan minimal 3 titik menggunakan input manual</li>
+                    <li class="pl-2">Titik akan otomatis terhubung dengan garis sesuai urutan</li>
+                    <li class="pl-2">Klik "Tutup Poligon" untuk menghubungkan titik pertama dan terakhir</li>
+                </ol>
+            </div>
+            
+            <!-- Transformasi yang Tersedia -->
+            <div class="mb-4 sm:mb-6 bg-white p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl shadow border-l-4 border-blue-500">
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-blue-900 mb-2 sm:mb-3 flex items-center">
+                    <i class="fas fa-sync-alt text-blue-600 bg-blue-100 p-2 sm:p-3 rounded-lg mr-2 sm:mr-3 text-sm sm:text-base"></i> 
+                    Transformasi yang Tersedia
+                </h3>
+                <ul class="space-y-2 text-gray-800 text-sm sm:text-base">
+                    <li class="flex items-start">
+                        <i class="fas fa-exchange-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Refleksi:</strong> Pencerminan terhadap sumbu X, Y, atau garis kustom</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-sync-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Rotasi:</strong> Perputaran dengan sudut dan pusat yang dapat disesuaikan</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-expand-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Dilatasi:</strong> Penskalaan dengan faktor dan pusat dilatasi</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-arrows-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Translasi:</strong> Pergeseran dengan vektor translasi</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Legenda Warna -->
+            <div class="mb-4 sm:mb-6 bg-white p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl shadow border-l-4 border-blue-500">
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-blue-900 mb-2 sm:mb-3 flex items-center">
+                    <i class="fas fa-palette text-blue-600 bg-blue-100 p-2 sm:p-3 rounded-lg mr-2 sm:mr-3 text-sm sm:text-base"></i> 
+                    Legenda Warna
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 rounded-lg mr-3 shadow"></div>
+                        <span class="text-blue-900 font-semibold text-sm sm:text-base">Biru: Bentuk asli (sebelum transformasi)</span>
+                    </div>
+                    <div class="flex items-center bg-orange-50 p-3 rounded-lg border border-orange-100">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500 rounded-lg mr-3 shadow"></div>
+                        <span class="text-blue-900 font-semibold text-sm sm:text-base">Oranye: Hasil transformasi</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tips -->
+            <div class="bg-white p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl shadow border-l-4 border-blue-500">
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-blue-900 mb-2 sm:mb-3 flex items-center">
+                    <i class="fas fa-lightbulb text-blue-600 bg-blue-100 p-2 sm:p-3 rounded-lg mr-2 sm:mr-3 text-sm sm:text-base"></i> 
+                    Tips
+                </h3>
+                <ul class="space-y-2 text-gray-800 text-sm sm:text-base">
+                    <li class="flex items-start">
+                        <i class="fas fa-star text-yellow-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span>Gunakan tombol "Contoh Bentuk" untuk mulai dengan poligon segilima</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-table text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span>Koordinat ditampilkan dalam tabel untuk memudahkan analisis</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-crosshairs text-green-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span>Gunakan "Reset Tampilan" untuk mengembalikan zoom dan pan ke posisi awal</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-calculator text-purple-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span>Semua nilai koordinat ditampilkan dalam bilangan bulat (pembulatan)</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-4 sm:p-6 border-t-2 sm:border-t-4 border-blue-300 text-center">
+            <button class="btn-close-modal bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 sm:py-3 px-6 sm:px-10 rounded-lg sm:rounded-xl transition-all duration-300 shadow hover:shadow-lg text-sm sm:text-base md:text-lg">
+                Tutup Petunjuk
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Back to Top Button - Lingkaran Style -->
+<button id="backToTop" class="back-to-top-btn group" title="Kembali ke atas" aria-label="Kembali ke atas">
+  <i class="fas fa-arrow-up text-lg sm:text-xl group-hover:animate-bounce"></i>
+</button>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
