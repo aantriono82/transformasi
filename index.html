@@ -5,50 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Aplikasi Geometri Transformasi</title>
     
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    screens: {
-                        'xs': '475px',
-                        '3xl': '1920px',
-                    },
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        secondary: {
-                            500: '#f59e0b',
-                            600: '#d97706',
-                        }
-                    },
-                    fontFamily: {
-                        'sans': ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
-                    },
-                    fontSize: {
-                        'xxs': '0.625rem',
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- CSS dibangun lokal melalui npm run build:css -->
+    <link rel="stylesheet" href="assets/fontawesome.min.css">
+    <link rel="stylesheet" href="assets/app.css">
     
     <!-- Responsive Meta Tags -->
     <meta name="theme-color" content="#1e3a8a">
@@ -145,7 +104,7 @@
    
 </head>
 
-<body class="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-950 text-gray-100 min-h-screen font-sans">
+<body class="app-shell bg-gradient-to-br from-primary-900 via-primary-800 to-primary-950 text-gray-100 min-h-screen font-sans">
     <div class="container mx-auto px-3 xs:px-4 sm:px-6 py-4 sm:py-6 max-w-7xl">
         <!-- Header - Responsive -->
         <header class="text-center mb-6 sm:mb-8 md:mb-10 p-4 sm:p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-primary-800 shadow-xl border border-primary-400/30">
@@ -155,24 +114,24 @@
             </h1>
             <p class="text-base sm:text-lg md:text-xl text-blue-100 mb-2">Visualisasi interaktif untuk memahami transformasi geometri</p>
             <p class="text-sm sm:text-base md:text-lg text-yellow-200 flex items-center justify-center gap-2">
-                <i class="fas fa-laptop"></i>
-                <span class="hidden xs:inline">Gunakan Laptop untuk mendapatkan hasil lebih baik</span>
-                <span class="xs:hidden">Optimal di Laptop</span>
+                <i class="fas fa-lightbulb" aria-hidden="true"></i>
+                <span>Mulai dari contoh bentuk, lalu eksplorasi transformasinya</span>
             </p>
         </header>
         
         <!-- Main Content - Responsive Layout -->
         <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10">
             <!-- Visualization Section -->
-            <section class="lg:w-2/3 bg-gradient-to-br from-primary-800 to-primary-900 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border border-primary-400/20">
-                <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white flex items-center">
+            <section class="visualization-panel lg:w-2/3 bg-gradient-to-br from-primary-800 to-primary-900 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border border-primary-400/20" aria-labelledby="visualization-title">
+                <h2 id="visualization-title" class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white flex items-center">
                     <i class="fas fa-eye text-secondary-500 mr-2 sm:mr-3 text-lg sm:text-xl"></i> 
                     Visualisasi Transformasi
                 </h2>
                 
                 <!-- Canvas Container with Responsive Height -->
-                <div class="bg-white rounded-lg md:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-inner">
-                    <canvas id="transformCanvas" class="w-full h-48 xs:h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96 rounded"></canvas>
+                <div class="canvas-shell bg-white rounded-lg md:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-inner">
+                    <div class="canvas-status" aria-live="polite">Refleksi terhadap sumbu X</div>
+                    <canvas id="transformCanvas" class="w-full h-48 xs:h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96 rounded" aria-label="Bidang koordinat interaktif untuk melihat transformasi geometri" tabindex="0"></canvas>
                 </div>
                 
                 <!-- Canvas Controls - Responsive -->
@@ -226,6 +185,20 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="preset-panel bg-primary-900/50 rounded-xl p-4 sm:p-5 mb-4 sm:mb-6 border border-primary-400/20">
+                    <div class="flex flex-col sm:flex-row sm:items-end gap-3">
+                        <div class="flex-1">
+                            <label for="shapePreset" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Preset bentuk</label>
+                            <select id="shapePreset" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-primary-800 border border-primary-600 rounded-lg sm:rounded-xl text-white text-sm sm:text-base">
+                                <option value="triangle">Segitiga</option>
+                                <option value="square">Persegi</option>
+                                <option value="pentagon" selected>Segilima</option>
+                            </select>
+                        </div>
+                        <button id="loadPreset" type="button" class="px-4 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg sm:rounded-xl">Muat Bentuk</button>
+                    </div>
+                </div>
                 
                 <!-- Legend - Responsive -->
                 <div class="flex flex-col xs:flex-row justify-center gap-3 xs:gap-4 sm:gap-6 md:gap-8 mb-4 sm:mb-6 flex-wrap">
@@ -262,7 +235,7 @@
                                             <th class="py-2 sm:py-3 px-3 sm:px-4 text-left font-bold rounded-tr-lg sm:rounded-tr-xl">Koordinat Hasil</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="coordinateTableBody" class="bg-primary-900/50 divide-y divide-primary-700/50">
+                                    <tbody id="coordinateTableBody" class="bg-primary-900/50 divide-y divide-primary-700/50" aria-live="polite">
                                         <tr>
                                             <td colspan="3" class="py-4 sm:py-6 text-center text-blue-300 text-sm sm:text-base">
                                                 Belum ada titik. Tambahkan titik menggunakan input manual di atas.
@@ -277,36 +250,36 @@
             </section>
             
             <!-- Controls Section - Responsive -->
-            <section class="lg:w-1/3 bg-primary-800/70 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border border-primary-400/20">
-                <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white flex items-center">
+            <section class="control-panel lg:w-1/3 bg-primary-800/70 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border border-primary-400/20" aria-labelledby="control-title">
+                <h2 id="control-title" class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white flex items-center">
                     <i class="fas fa-sliders-h text-secondary-500 mr-2 sm:mr-3 text-lg sm:text-xl"></i> Kontrol Transformasi
                 </h2>
                 
                 <!-- Transform Type Selector - Responsive Grid -->
 <div class="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
     <!-- Refleksi Button - Default Active -->
-    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-secondary-500 rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 shadow-md active-transform" data-transform="reflection">
+    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-secondary-500 rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 shadow-md active-transform" data-transform="reflection" aria-pressed="true">
         <i class="fas fa-exchange-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
         <span class="text-xs sm:text-sm md:text-base">Refleksi</span>
-    </div>
+    </button>
     
     <!-- Rotasi Button -->
-    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="rotation">
+    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="rotation" aria-pressed="false">
         <i class="fas fa-sync-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
         <span class="text-xs sm:text-sm md:text-base">Rotasi</span>
-    </div>
+    </button>
     
     <!-- Dilatasi Button -->
-    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="dilation">
+    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="dilation" aria-pressed="false">
         <i class="fas fa-expand-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
         <span class="text-xs sm:text-sm md:text-base">Dilatasi</span>
-    </div>
+    </button>
     
     <!-- Translasi Button -->
-    <div class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="translation">
+    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="translation" aria-pressed="false">
         <i class="fas fa-arrows-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
         <span class="text-xs sm:text-sm md:text-base">Translasi</span>
-    </div>
+    </button>
 </div>
                 
                 <!-- Parameters Container - Responsive -->
@@ -437,6 +410,18 @@
                             <span class="truncate">Tutup Poligon</span>
                         </button>
                     </div>
+
+                    <div class="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                        <button id="undoAction" type="button" class="action-btn bg-slate-600 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm" disabled>
+                            <i class="fas fa-undo mr-1 sm:mr-2"></i><span>Undo</span>
+                        </button>
+                        <button id="redoAction" type="button" class="action-btn bg-slate-600 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm" disabled>
+                            <i class="fas fa-redo mr-1 sm:mr-2"></i><span>Redo</span>
+                        </button>
+                        <button id="exportCanvas" type="button" class="action-btn bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-2.5 px-3 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm">
+                            <i class="fas fa-download mr-1 sm:mr-2"></i><span>Ekspor</span>
+                        </button>
+                    </div>
                     
                     <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                         <button id="resetTransform" class="action-btn reset bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
@@ -512,12 +497,12 @@
 
 
    <!-- Modal Petunjuk Penggunaan - Responsive dengan Konten Lengkap -->
-<div id="helpModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-2 sm:p-4">
+<div id="helpModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-2 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
     <div class="bg-white rounded-lg md:rounded-xl lg:rounded-2xl shadow-2xl w-full max-w-xs xs:max-w-sm sm:max-w-md md:max-w-lg lg:max-w-3xl xl:max-w-4xl max-h-[90vh] overflow-hidden border-2 sm:border-4 border-blue-400">
         <!-- Modal Header -->
         <div class="bg-gradient-to-r from-blue-800 via-blue-700 to-blue-600 p-4 sm:p-6 border-b-2 sm:border-b-4 border-blue-500">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white flex items-center">
+                <h2 id="helpModalTitle" class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white flex items-center">
                     <i class="fas fa-question-circle text-yellow-300 mr-2 sm:mr-3 sm:text-xl md:text-2xl"></i> 
                     <span class="text-white drop-shadow-md">Petunjuk Penggunaan</span>
                 </h2>
@@ -529,6 +514,15 @@
         
         <!-- Modal Body dengan Konten Lengkap -->
         <div class="p-3 sm:p-4 md:p-6 overflow-y-auto max-h-[60vh] sm:max-h-[65vh] bg-gradient-to-b from-blue-50 to-white">
+            <div class="quick-start mb-4 sm:mb-6 rounded-xl bg-blue-900 p-4 sm:p-5 text-white shadow-lg">
+                <p class="text-xs uppercase tracking-wider text-blue-200 font-bold mb-2">Mulai cepat</p>
+                <p class="text-base sm:text-lg font-bold mb-2">Buat bentuk, pilih transformasi, lalu lihat hasilnya.</p>
+                <ol class="grid gap-2 sm:grid-cols-3 text-sm text-blue-100 list-decimal pl-5">
+                    <li>Gunakan preset atau tambahkan titik manual.</li>
+                    <li>Pilih refleksi, rotasi, dilatasi, atau translasi.</li>
+                    <li>Tekan “Terapkan Transformasi”.</li>
+                </ol>
+            </div>
             <!-- Interaksi dengan Canvas -->
             <div class="mb-4 sm:mb-6 bg-white p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl shadow border-l-4 border-blue-500">
                 <h3 class="text-base sm:text-lg md:text-xl font-bold text-blue-900 mb-2 sm:mb-3 flex items-center">
@@ -682,6 +676,7 @@
 </button>
 
     <!-- JavaScript -->
+    <script src="transformations.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

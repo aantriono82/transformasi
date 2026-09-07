@@ -12,6 +12,11 @@ const zoomInButton = document.getElementById('zoomIn');
 const zoomOutButton = document.getElementById('zoomOut');
 const manualPointInput = document.getElementById('manualPointInput');
 const addManualPointButton = document.getElementById('addManualPoint');
+const loadPresetButton = document.getElementById('loadPreset');
+const shapePreset = document.getElementById('shapePreset');
+const undoButton = document.getElementById('undoAction');
+const redoButton = document.getElementById('redoAction');
+const exportButton = document.getElementById('exportCanvas');
 const helpBtn = document.getElementById('helpBtn');
 const helpModal = document.getElementById('helpModal');
 
@@ -20,6 +25,8 @@ let points = [];
 let transformedPoints = [];
 let isPolygonClosed = false;
 let currentTransform = 'reflection';
+let history = [];
+let historyIndex = -1;
 
 // Variabel untuk transformasi view (pan dan zoom)
 let viewOffsetX = 0;
@@ -28,35 +35,37 @@ let viewScale = 10; // Skala awal (1 unit = 10 pixel)
 const minScale = 2;
 const maxScale = 50;
 
-// Variabel untuk interaksi mouse
-let isDragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let initialViewOffsetX = 0;
-let initialViewOffsetY = 0;
-let isRightClick = false;
-
-// Variabel untuk multi-touch zoom
-let initialDistance = null;
-let initialScale = null;
-let initialPinchWorldX = null;
-let initialPinchWorldY = null;
-
 // Variabel untuk debounce resize
 let resizeTimeout;
+const transformLabels = {
+    reflection: 'Refleksi terhadap sumbu X',
+    rotation: 'Rotasi 90° dengan pusat (0, 0)',
+    dilation: 'Dilatasi dengan faktor 2',
+    translation: 'Translasi dengan vektor (50, 30)'
+};
+const transformNames = {
+    reflection: 'refleksi',
+    rotation: 'rotasi',
+    dilation: 'dilatasi',
+    translation: 'translasi'
+};
 
 // ==================== FUNGSI UTAMA ====================
 
 // Fungsi untuk setup ukuran canvas
 function setupCanvasSize() {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    const width = canvas.offsetWidth;
+    const height = canvas.offsetHeight;
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 }
 
 // Fungsi untuk mengubah koordinat dunia ke koordinat layar
 function worldToScreen(worldX, worldY) {
-    const canvasCenterX = canvas.width / 2;
-    const canvasCenterY = canvas.height / 2;
+    const canvasCenterX = canvas.offsetWidth / 2;
+    const canvasCenterY = canvas.offsetHeight / 2;
     const screenX = canvasCenterX + (worldX - viewOffsetX) * viewScale;
     const screenY = canvasCenterY - (worldY - viewOffsetY) * viewScale;
     return { x: screenX, y: screenY };
@@ -64,8 +73,8 @@ function worldToScreen(worldX, worldY) {
 
 // Fungsi untuk mengubah koordinat layar ke koordinat dunia
 function screenToWorld(screenX, screenY) {
-    const canvasCenterX = canvas.width / 2;
-    const canvasCenterY = canvas.height / 2;
+    const canvasCenterX = canvas.offsetWidth / 2;
+    const canvasCenterY = canvas.offsetHeight / 2;
     const worldX = viewOffsetX + (screenX - canvasCenterX) / viewScale;
     const worldY = viewOffsetY - (screenY - canvasCenterY) / viewScale;
     return { x: worldX, y: worldY };
@@ -102,15 +111,23 @@ function setActiveTransformButton(button) {
     document.querySelectorAll('.transform-btn').forEach(btn => {
         btn.classList.remove('active-transform', 'border-secondary-500');
         btn.classList.add('border-transparent');
+        btn.setAttribute('aria-pressed', 'false');
     });
     
     // Tambahkan kelas active ke tombol yang diklik
     button.classList.remove('border-transparent');
     button.classList.add('active-transform', 'border-secondary-500');
+    button.setAttribute('aria-pressed', 'true');
     
     // Tampilkan parameter yang sesuai
     currentTransform = button.dataset.transform;
     showTransformParams(currentTransform);
+    updateTransformStatus();
+}
+
+function updateTransformStatus() {
+    const status = document.querySelector('.canvas-status');
+    if (status) status.textContent = transformLabels[currentTransform] || 'Transformasi aktif';
 }
 
 // ==================== FUNGSI MODAL PETUNJUK ====================
@@ -119,12 +136,15 @@ function setActiveTransformButton(button) {
 function showHelpModal() {
     helpModal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    const closeBtn = helpModal.querySelector('.close-modal');
+    if (closeBtn) closeBtn.focus();
 }
 
 // Fungsi untuk menyembunyikan modal petunjuk
 function hideHelpModal() {
     helpModal.classList.add('hidden');
     document.body.style.overflow = 'auto';
+    if (helpBtn) helpBtn.focus();
 }
 
 // Fungsi untuk setup modal petunjuk
@@ -160,17 +180,13 @@ function setupHelpModal() {
 
 // Setup semua event listeners
 function setupEventListeners() {
-    // Mouse events untuk desktop
-    canvas.addEventListener('mousedown', handleCanvasMouseDown);
-    canvas.addEventListener('mousemove', handleCanvasMouseMove);
-    canvas.addEventListener('mouseup', handleCanvasMouseUp);
+    // Satu alur pointer untuk mouse, touch, dan stylus.
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
     canvas.addEventListener('wheel', handleCanvasWheel, { passive: false });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-    
-    // Touch events untuk mobile/tablet
-    canvas.addEventListener('touchstart', handleAllTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleAllTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleAllTouchEnd);
     
     // Event listeners untuk tombol transformasi
     document.querySelectorAll('.transform-btn').forEach(button => {
@@ -185,6 +201,10 @@ function setupEventListeners() {
     closePolygonButton.addEventListener('click', closePolygon);
     resetButton.addEventListener('click', resetTransform);
     sampleButton.addEventListener('click', createSampleShape);
+    loadPresetButton.addEventListener('click', loadSelectedPreset);
+    undoButton.addEventListener('click', undo);
+    redoButton.addEventListener('click', redo);
+    exportButton.addEventListener('click', exportCanvasImage);
     resetViewButton.addEventListener('click', resetView);
     zoomInButton.addEventListener('click', () => zoom(1.2));
     zoomOutButton.addEventListener('click', () => zoom(0.8));
@@ -210,6 +230,56 @@ function setupEventListeners() {
     window.addEventListener('resize', handleWindowResize);
 }
 
+function clonePoints(value) {
+    return value.map(point => ({ x: point.x, y: point.y }));
+}
+
+function saveHistory() {
+    history = history.slice(0, historyIndex + 1);
+    history.push({ points: clonePoints(points), transformedPoints: clonePoints(transformedPoints), isPolygonClosed });
+    historyIndex = history.length - 1;
+    updateHistoryButtons();
+}
+
+function restoreHistory(index) {
+    const snapshot = history[index];
+    if (!snapshot) return;
+    points = clonePoints(snapshot.points);
+    transformedPoints = clonePoints(snapshot.transformedPoints);
+    isPolygonClosed = snapshot.isPolygonClosed;
+    historyIndex = index;
+    redrawCanvas();
+    updateCoordinateTable();
+    updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+    if (undoButton) undoButton.disabled = historyIndex <= 0;
+    if (redoButton) redoButton.disabled = historyIndex >= history.length - 1;
+}
+
+function undo() {
+    if (historyIndex > 0) {
+        restoreHistory(historyIndex - 1);
+        showMessage('Perubahan terakhir dibatalkan', 'success');
+    }
+}
+
+function redo() {
+    if (historyIndex < history.length - 1) {
+        restoreHistory(historyIndex + 1);
+        showMessage('Perubahan dipulihkan', 'success');
+    }
+}
+
+function exportCanvasImage() {
+    const link = document.createElement('a');
+    link.download = 'geometri-transformasi.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showMessage('Visualisasi berhasil diekspor', 'success');
+}
+
 // ==================== FUNGSI CANVAS DAN GRID ====================
 
 // Grid size optimal
@@ -231,12 +301,12 @@ function getLabelInterval() {
 // Gambar grid dan sumbu
 function drawGridAndAxes() {
     // Bersihkan canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
     
     const labelInterval = getLabelInterval();
     
-    const canvasCenterX = canvas.width / 2;
-    const canvasCenterY = canvas.height / 2;
+    const canvasCenterX = canvas.offsetWidth / 2;
+    const canvasCenterY = canvas.offsetHeight / 2;
     
     const leftWorld = viewOffsetX - canvasCenterX / viewScale;
     const rightWorld = viewOffsetX + canvasCenterX / viewScale;
@@ -263,7 +333,7 @@ function drawGridAndAxes() {
         
         ctx.beginPath();
         ctx.moveTo(screenPos.x, 0);
-        ctx.lineTo(screenPos.x, canvas.height);
+        ctx.lineTo(screenPos.x, canvas.offsetHeight);
         ctx.stroke();
     }
     
@@ -283,7 +353,7 @@ function drawGridAndAxes() {
         
         ctx.beginPath();
         ctx.moveTo(0, screenPos.y);
-        ctx.lineTo(canvas.width, screenPos.y);
+        ctx.lineTo(canvas.offsetWidth, screenPos.y);
         ctx.stroke();
     }
     
@@ -296,7 +366,7 @@ function drawGridAndAxes() {
     const xAxisEnd = worldToScreen(rightWorld, 0);
     ctx.beginPath();
     ctx.moveTo(0, xAxisStart.y);
-    ctx.lineTo(canvas.width, xAxisEnd.y);
+    ctx.lineTo(canvas.offsetWidth, xAxisEnd.y);
     ctx.stroke();
     
     // Sumbu Y
@@ -304,14 +374,14 @@ function drawGridAndAxes() {
     const yAxisEnd = worldToScreen(0, bottomWorld);
     ctx.beginPath();
     ctx.moveTo(yAxisStart.x, 0);
-    ctx.lineTo(yAxisEnd.x, canvas.height);
+    ctx.lineTo(yAxisEnd.x, canvas.offsetHeight);
     ctx.stroke();
     
     // Panah sumbu X
     ctx.beginPath();
-    ctx.moveTo(canvas.width - 10, xAxisEnd.y - 5);
-    ctx.lineTo(canvas.width, xAxisEnd.y);
-    ctx.lineTo(canvas.width - 10, xAxisEnd.y + 5);
+    ctx.moveTo(canvas.offsetWidth - 10, xAxisEnd.y - 5);
+    ctx.lineTo(canvas.offsetWidth, xAxisEnd.y);
+    ctx.lineTo(canvas.offsetWidth - 10, xAxisEnd.y + 5);
     ctx.fillStyle = '#333';
     ctx.fill();
     
@@ -326,12 +396,12 @@ function drawGridAndAxes() {
     ctx.fillStyle = '#333';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('X', canvas.width - 20, xAxisEnd.y - 10);
+    ctx.fillText('X', canvas.offsetWidth - 20, xAxisEnd.y - 10);
     ctx.fillText('Y', yAxisStart.x + 10, 20);
     
     // Label titik asal (0,0)
     const origin = worldToScreen(0, 0);
-    if (origin.x > 15 && origin.x < canvas.width - 15 && origin.y > 15 && origin.y < canvas.height - 15) {
+    if (origin.x > 15 && origin.x < canvas.offsetWidth - 15 && origin.y > 15 && origin.y < canvas.offsetHeight - 15) {
         ctx.font = 'bold 13px Arial';
         ctx.textAlign = 'left';
         ctx.fillText('(0,0)', origin.x + 10, origin.y - 10);
@@ -350,7 +420,7 @@ function drawGridAndAxes() {
         
         const screenPos = worldToScreen(worldX, 0);
         
-        if (screenPos.x > 30 && screenPos.x < canvas.width - 30) {
+        if (screenPos.x > 30 && screenPos.x < canvas.offsetWidth - 30) {
             ctx.beginPath();
             ctx.moveTo(screenPos.x, screenPos.y - 5);
             ctx.lineTo(screenPos.x, screenPos.y + 5);
@@ -373,7 +443,7 @@ function drawGridAndAxes() {
         
         const screenPos = worldToScreen(0, worldY);
         
-        if (screenPos.y > 20 && screenPos.y < canvas.height - 20) {
+        if (screenPos.y > 20 && screenPos.y < canvas.offsetHeight - 20) {
             ctx.beginPath();
             ctx.moveTo(screenPos.x - 5, screenPos.y);
             ctx.lineTo(screenPos.x + 5, screenPos.y);
@@ -404,6 +474,8 @@ function addManualPoint() {
         
         points.push({ x, y });
         isPolygonClosed = false;
+        transformedPoints = [];
+        saveHistory();
         
         manualPointInput.value = '';
         
@@ -494,6 +566,8 @@ function showMessage(message, type) {
     
     const messageElement = document.createElement('div');
     messageElement.className = `temp-message ${type}`;
+    messageElement.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    messageElement.setAttribute('aria-live', 'polite');
     messageElement.textContent = message;
     messageElement.style.cssText = `
         position: fixed;
@@ -531,49 +605,77 @@ function showMessage(message, type) {
     }, 3000);
 }
 
-// ==================== FUNGSI INTERAKSI MOUSE ====================
+// Interaksi terpadu untuk mouse, touch, dan stylus.
+const activePointers = new Map();
+let pointerPanStart = null;
+let pointerPinchStart = null;
 
-// Tangani mouse down pada canvas
-function handleCanvasMouseDown(event) {
+function pointerPosition(event) {
     const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    if (event.button === 2) {
-        isDragging = true;
-        isRightClick = true;
-        dragStartX = x;
-        dragStartY = y;
-        initialViewOffsetX = viewOffsetX;
-        initialViewOffsetY = viewOffsetY;
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+}
+
+function handlePointerDown(event) {
+    event.preventDefault();
+    activePointers.set(event.pointerId, pointerPosition(event));
+    canvas.setPointerCapture(event.pointerId);
+
+    if (activePointers.size === 1 && (event.pointerType !== 'mouse' || event.button === 2)) {
+        const position = activePointers.get(event.pointerId);
+        pointerPanStart = {
+            x: position.x,
+            y: position.y,
+            offsetX: viewOffsetX,
+            offsetY: viewOffsetY
+        };
         canvas.style.cursor = 'grabbing';
+    }
+
+    if (activePointers.size === 2) {
+        const [first, second] = [...activePointers.values()];
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        pointerPinchStart = {
+            distance: Math.hypot(second.x - first.x, second.y - first.y),
+            scale: viewScale,
+            centerX,
+            centerY,
+            worldX: screenToWorld(centerX, centerY).x,
+            worldY: screenToWorld(centerX, centerY).y
+        };
+        pointerPanStart = null;
     }
 }
 
-// Tangani mouse move pada canvas
-function handleCanvasMouseMove(event) {
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    if (isDragging && isRightClick) {
-        const dx = (x - dragStartX) / viewScale;
-        const dy = -(y - dragStartY) / viewScale;
-        
-        viewOffsetX = initialViewOffsetX - dx;
-        viewOffsetY = initialViewOffsetY - dy;
-        
+function handlePointerMove(event) {
+    if (!activePointers.has(event.pointerId)) return;
+    event.preventDefault();
+    activePointers.set(event.pointerId, pointerPosition(event));
+
+    if (activePointers.size === 2 && pointerPinchStart) {
+        const [first, second] = [...activePointers.values()];
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        const distance = Math.hypot(second.x - first.x, second.y - first.y);
+        viewScale = Math.max(minScale, Math.min(maxScale, pointerPinchStart.scale * distance / pointerPinchStart.distance));
+        const worldAfter = screenToWorld(centerX, centerY);
+        viewOffsetX += pointerPinchStart.worldX - worldAfter.x;
+        viewOffsetY += pointerPinchStart.worldY - worldAfter.y;
+        redrawCanvas();
+    } else if (activePointers.size === 1 && pointerPanStart) {
+        const position = activePointers.get(event.pointerId);
+        viewOffsetX = pointerPanStart.offsetX - (position.x - pointerPanStart.x) / viewScale;
+        viewOffsetY = pointerPanStart.offsetY + (position.y - pointerPanStart.y) / viewScale;
         redrawCanvas();
     }
 }
 
-// Tangani mouse up pada canvas
-function handleCanvasMouseUp(event) {
-    if (isDragging) {
-        isDragging = false;
-        isRightClick = false;
-        canvas.style.cursor = 'default';
-    }
+function handlePointerUp(event) {
+    activePointers.delete(event.pointerId);
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+    pointerPinchStart = null;
+    pointerPanStart = null;
+    canvas.style.cursor = 'default';
 }
 
 // Tangani scroll wheel untuk zoom
@@ -599,99 +701,12 @@ function handleCanvasWheel(event) {
     redrawCanvas();
 }
 
-// ==================== FUNGSI TOUCH ====================
-
-function handleAllTouchStart(event) {
-    event.preventDefault();
-    
-    if (event.touches.length === 1) {
-        const touch = event.touches[0];
-        const rect = canvas.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        
-        isDragging = true;
-        dragStartX = x;
-        dragStartY = y;
-        initialViewOffsetX = viewOffsetX;
-        initialViewOffsetY = viewOffsetY;
-        
-        canvas.style.cursor = 'grabbing';
-    } else if (event.touches.length === 2) {
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        const rect = canvas.getBoundingClientRect();
-        const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
-        const centerY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
-
-        initialDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
-        initialScale = viewScale;
-        initialPinchWorldX = screenToWorld(centerX, centerY).x;
-        initialPinchWorldY = screenToWorld(centerX, centerY).y;
-        isDragging = false;
-    }
-}
-
-function handleAllTouchMove(event) {
-    event.preventDefault();
-    
-    if (event.touches.length === 1 && isDragging) {
-        const touch = event.touches[0];
-        const rect = canvas.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        
-        const dx = (x - dragStartX) / viewScale;
-        const dy = -(y - dragStartY) / viewScale;
-        
-        viewOffsetX = initialViewOffsetX - dx;
-        viewOffsetY = initialViewOffsetY - dy;
-        
-        redrawCanvas();
-    } else if (event.touches.length === 2 && initialDistance !== null) {
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        const currentDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
-        
-        const zoomFactor = currentDistance / initialDistance;
-        const newScale = initialScale * zoomFactor;
-        
-        viewScale = Math.max(minScale, Math.min(maxScale, newScale));
-        
-        const rect = canvas.getBoundingClientRect();
-        const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
-        const centerY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
-        const worldPosAfter = screenToWorld(centerX, centerY);
-
-        viewOffsetX += initialPinchWorldX - worldPosAfter.x;
-        viewOffsetY += initialPinchWorldY - worldPosAfter.y;
-        
-        redrawCanvas();
-    }
-}
-
-function handleAllTouchEnd(event) {
-    event.preventDefault();
-    isDragging = false;
-    initialDistance = null;
-    initialScale = null;
-    initialPinchWorldX = null;
-    initialPinchWorldY = null;
-    canvas.style.cursor = 'default';
-}
-
 // ==================== FUNGSI ZOOM DAN VIEW CONTROL ====================
 
 // Fungsi zoom dengan faktor tertentu
 function zoom(factor) {
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    const centerX = canvas.offsetWidth / 2;
+    const centerY = canvas.offsetHeight / 2;
     
     const worldPosBeforeZoom = screenToWorld(centerX, centerY);
     
@@ -728,7 +743,8 @@ function handleWindowResize() {
 
 // Fungsi untuk membulatkan koordinat
 function formatCoordinate(coord) {
-    return Math.round(coord);
+    const rounded = Math.round(coord * 100) / 100;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 // Gambar semua titik dan garis
@@ -858,22 +874,37 @@ function toggleCustomReflection() {
     } else {
         customParams.style.display = 'none';
     }
+
+    const labels = {
+        x: 'Refleksi terhadap sumbu X',
+        y: 'Refleksi terhadap sumbu Y',
+        'y=x': 'Refleksi terhadap garis y = x',
+        'y=-x': 'Refleksi terhadap garis y = -x',
+        custom: 'Refleksi terhadap garis kustom'
+    };
+    transformLabels.reflection = labels[axis] || labels.x;
+    updateTransformStatus();
 }
 
 // Update nilai parameter refleksi
 function updateReflectionParams() {
     document.getElementById('reflectionMValue').textContent = document.getElementById('reflectionM').value;
     document.getElementById('reflectionCValue').textContent = document.getElementById('reflectionC').value;
+    updateTransformStatus();
 }
 
 // Update nilai parameter rotasi
 function updateRotationParams() {
     document.getElementById('rotationAngleValue').textContent = document.getElementById('rotationAngle').value + '°';
+    transformLabels.rotation = `Rotasi ${document.getElementById('rotationAngle').value}° dengan pusat (0, 0)`;
+    updateTransformStatus();
 }
 
 // Update nilai parameter dilatasi
 function updateDilationParams() {
     document.getElementById('scaleFactorValue').textContent = document.getElementById('scaleFactor').value;
+    transformLabels.dilation = `Dilatasi dengan faktor ${document.getElementById('scaleFactor').value}`;
+    updateTransformStatus();
 }
 
 // Terapkan transformasi yang dipilih
@@ -901,49 +932,23 @@ function applyTransform() {
             applyTranslation();
             break;
     }
+
+    saveHistory();
     
     // Gambar ulang canvas
     redrawCanvas();
     updateCoordinateTable();
     
     // Tampilkan pesan
-    showMessage(`Transformasi ${currentTransform} berhasil diterapkan!`, 'success');
+    showMessage(`Transformasi ${transformNames[currentTransform]} berhasil diterapkan!`, 'success');
 }
 
 // Terapkan refleksi
 function applyReflection() {
     const axis = document.getElementById('reflectionAxis').value;
-    
-    points.forEach(point => {
-        let x = point.x;
-        let y = point.y;
-        
-        switch (axis) {
-            case 'x': // Refleksi terhadap sumbu X
-                transformedPoints.push({ x: x, y: -y });
-                break;
-            case 'y': // Refleksi terhadap sumbu Y
-                transformedPoints.push({ x: -x, y: y });
-                break;
-            case 'y=x': // Refleksi terhadap garis y = x
-                transformedPoints.push({ x: y, y: x });
-                break;
-            case 'y=-x': // Refleksi terhadap garis y = -x
-                transformedPoints.push({ x: -y, y: -x });
-                break;
-            case 'custom': // Refleksi terhadap garis y = mx + c
-                const m = parseFloat(document.getElementById('reflectionM').value);
-                const c = parseFloat(document.getElementById('reflectionC').value);
-                
-                // Rumus refleksi terhadap garis y = mx + c
-                const d = (x + (y - c) * m) / (1 + m * m);
-                const xRefl = 2 * d - x;
-                const yRefl = 2 * d * m - y + 2 * c;
-                
-                transformedPoints.push({ x: xRefl, y: yRefl });
-                break;
-        }
-    });
+    const m = parseFloat(document.getElementById('reflectionM').value);
+    const c = parseFloat(document.getElementById('reflectionC').value);
+    transformedPoints.push(...GeometryTransformations.reflect(points, axis, m, c));
 }
 
 // Terapkan rotasi
@@ -952,24 +957,7 @@ function applyRotation() {
     const centerX = parseFloat(document.getElementById('rotationCenterX').value) || 0;
     const centerY = parseFloat(document.getElementById('rotationCenterY').value) || 0;
     
-    // Konversi sudut ke radian
-    const rad = angle * Math.PI / 180;
-    
-    points.forEach(point => {
-        // Pindahkan titik ke pusat rotasi
-        const xTranslated = point.x - centerX;
-        const yTranslated = point.y - centerY;
-        
-        // Rotasi
-        const xRotated = xTranslated * Math.cos(rad) - yTranslated * Math.sin(rad);
-        const yRotated = xTranslated * Math.sin(rad) + yTranslated * Math.cos(rad);
-        
-        // Kembalikan ke posisi semula
-        const xFinal = xRotated + centerX;
-        const yFinal = yRotated + centerY;
-        
-        transformedPoints.push({ x: xFinal, y: yFinal });
-    });
+    transformedPoints.push(...GeometryTransformations.rotate(points, angle, centerX, centerY));
 }
 
 // Terapkan dilatasi
@@ -978,17 +966,7 @@ function applyDilation() {
     const centerX = parseFloat(document.getElementById('dilationCenterX').value) || 0;
     const centerY = parseFloat(document.getElementById('dilationCenterY').value) || 0;
     
-    points.forEach(point => {
-        // Hitung vektor dari pusat dilatasi ke titik
-        const dx = point.x - centerX;
-        const dy = point.y - centerY;
-        
-        // Terapkan faktor skala
-        const xScaled = centerX + dx * factor;
-        const yScaled = centerY + dy * factor;
-        
-        transformedPoints.push({ x: xScaled, y: yScaled });
-    });
+    transformedPoints.push(...GeometryTransformations.dilate(points, factor, centerX, centerY));
 }
 
 // Terapkan translasi
@@ -996,9 +974,7 @@ function applyTranslation() {
     const tx = parseFloat(document.getElementById('translationX').value) || 0;
     const ty = parseFloat(document.getElementById('translationY').value) || 0;
     
-    points.forEach(point => {
-        transformedPoints.push({ x: point.x + tx, y: point.y + ty });
-    });
+    transformedPoints.push(...GeometryTransformations.translate(points, tx, ty));
 }
 
 // ==================== FUNGSI MANAJEMEN TITIK ====================
@@ -1008,6 +984,7 @@ function clearPoints() {
     points = [];
     transformedPoints = [];
     isPolygonClosed = false;
+    saveHistory();
     redrawCanvas();
     updateCoordinateTable();
     showMessage('Semua titik telah dihapus', 'success');
@@ -1021,6 +998,7 @@ function closePolygon() {
     }
     
     isPolygonClosed = true;
+    saveHistory();
     redrawCanvas();
     showMessage('Poligon telah ditutup', 'success');
 }
@@ -1028,6 +1006,7 @@ function closePolygon() {
 // Reset transformasi
 function resetTransform() {
     transformedPoints = [];
+    saveHistory();
     redrawCanvas();
     updateCoordinateTable();
     showMessage('Transformasi telah direset', 'success');
@@ -1045,9 +1024,25 @@ function createSampleShape() {
     
     isPolygonClosed = true;
     transformedPoints = [];
+    saveHistory();
     redrawCanvas();
     updateCoordinateTable();
     showMessage('Contoh bentuk segilima telah dibuat', 'success');
+}
+
+function loadSelectedPreset() {
+    const presets = {
+        triangle: [{ x: -3, y: -2 }, { x: 0, y: 4 }, { x: 3, y: -2 }],
+        square: [{ x: -3, y: -3 }, { x: 3, y: -3 }, { x: 3, y: 3 }, { x: -3, y: 3 }],
+        pentagon: [{ x: -3, y: 2 }, { x: 0, y: 5 }, { x: 3, y: 2 }, { x: 2, y: -1 }, { x: -2, y: -1 }]
+    };
+    points = clonePoints(presets[shapePreset.value] || presets.pentagon);
+    transformedPoints = [];
+    isPolygonClosed = true;
+    saveHistory();
+    redrawCanvas();
+    updateCoordinateTable();
+    showMessage('Preset bentuk berhasil dimuat', 'success');
 }
 
 // Update tabel koordinat
