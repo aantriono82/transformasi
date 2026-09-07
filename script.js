@@ -493,7 +493,7 @@ function parsePointInput(input) {
     input = input.trim();
     
     // Format 1: (x, y)
-    let matches = input.match(/\(\s*([-+]?\d*\.?\d+)\s*,\s*([-+]?\d*\.?\d+)\s*\)/);
+    let matches = input.match(/^\s*\(\s*([-+]?\d*\.?\d+)\s*,\s*([-+]?\d*\.?\d+)\s*\)\s*$/);
     if (matches) {
         const x = parseFloat(matches[1]);
         const y = parseFloat(matches[2]);
@@ -1128,7 +1128,11 @@ function initShareButtons() {
   document.getElementById('share-copy').addEventListener('click', function(e) {
     e.preventDefault();
     const fullText = shareText + currentUrl;
-    navigator.clipboard.writeText(fullText).then(function() {
+    const copyPromise = navigator.clipboard && navigator.clipboard.writeText
+      ? navigator.clipboard.writeText(fullText)
+      : Promise.reject(new Error('Clipboard API unavailable'));
+
+    copyPromise.then(function() {
       // Show check icon
       const btn = this;
       const iconLink = btn.querySelector('.fa-link');
