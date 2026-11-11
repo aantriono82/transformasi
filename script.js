@@ -45,6 +45,10 @@ let isPolygonClosed = false;
 let currentTransform = 'reflection';
 const history = createHistory();
 
+// Komposisi: langkah yang sudah dijadikan bentuk berikutnya, dan bentuk awalnya.
+let compositionSteps = [];
+let compositionOrigin = null;
+
 // Indeks titik yang disorot (kanvas atau tabel); label lengkap & cincin sorot.
 let hoveredIndex = null;
 // Animasi bentuk asli menuju bayangannya setelah "Terapkan Transformasi".
@@ -204,7 +208,8 @@ function handleTabKeydown(event) {
 
 function updateTransformStatus() {
     const status = document.querySelector('.canvas-status');
-    if (status) status.textContent = describeTransform(currentTransform, getTransformParams(currentTransform));
+    const step = compositionSteps.length ? `Langkah ${compositionSteps.length + 1}: ` : '';
+    if (status) status.textContent = step + describeTransform(currentTransform, getTransformParams(currentTransform));
     $('sheetTitle').textContent = `Atur ${transformNames[currentTransform]}`;
     updateFormula();
 }
@@ -299,6 +304,8 @@ function setupEventListeners() {
     document.querySelectorAll('.shape-chip').forEach(chip => {
         chip.addEventListener('click', () => loadPreset(chip.dataset.preset));
     });
+    $('chainTransform').addEventListener('click', chainTransform);
+    $('compositionReset').addEventListener('click', resetComposition);
     sheetToggle.addEventListener('click', () => setSheetExpanded(controlPanel.classList.contains('is-collapsed')));
     undoButton.addEventListener('click', undo);
     redoButton.addEventListener('click', redo);
@@ -385,7 +392,9 @@ function saveHistory() {
         transformedPoints: clonePoints(transformedPoints),
         resultMeta: resultMeta && { ...resultMeta },
         isPolygonClosed,
-        transform: currentTransform
+        transform: currentTransform,
+        compositionSteps: compositionSteps.map(step => ({ transform: step.transform, params: { ...step.params } })),
+        compositionOrigin: compositionOrigin && clonePoints(compositionOrigin)
     });
     updateHistoryButtons();
 }
@@ -396,12 +405,15 @@ function restoreSnapshot(snapshot) {
     transformedPoints = clonePoints(snapshot.transformedPoints);
     resultMeta = snapshot.resultMeta && { ...snapshot.resultMeta };
     isPolygonClosed = snapshot.isPolygonClosed;
+    compositionSteps = (snapshot.compositionSteps || []).map(step => ({ transform: step.transform, params: { ...step.params } }));
+    compositionOrigin = snapshot.compositionOrigin ? clonePoints(snapshot.compositionOrigin) : null;
 
     // Hasil transformasi selalu ditampilkan di tab yang menghasilkannya.
     const tabTransform = AppUtils.snapshotTransform(snapshot);
     const tab = transformTabs.find(item => item.dataset.transform === tabTransform);
     if (tab && tabTransform !== currentTransform) setActiveTab(tab, { keepResult: true });
 
+    updateTransformStatus();
     redrawCanvas();
     updateCoordinateTable();
     updateHistoryButtons();
@@ -554,6 +566,7 @@ function drawGridAndAxes() {
 // ==================== INPUT TITIK ====================
 
 function addPoint(x, y) {
+    clearComposition();
     points.push({ x, y });
     isPolygonClosed = false;
     transformedPoints = [];
@@ -730,6 +743,7 @@ function moveDrag(position) {
     if (target.kind === 'point') {
         const current = points[target.index];
         if (current.x === world.x && current.y === world.y) return;
+        clearComposition();
         points[target.index] = world;
         // Bayangan yang sudah diterapkan ikut bergerak bersama titik aslinya.
         if (resultMeta && resultMeta.params && transformedPoints.length === points.length) {
@@ -944,7 +958,7 @@ function ensureVisible(extraPoints = []) {
 // ==================== GAMBAR TITIK, GARIS, DAN ELEMEN BANTU ====================
 
 // Gambar poligon/polyline. Pratinjau digambar putus-putus dan transparan.
-function drawShape(shapePoints, color, { preview = false } = {}) {
+function drawShape(shapePoints, color, { preview = false, ghost = false } = {}) {
     if (!shapePoints.length) return;
     const screenPoints = shapePoints.map(p => worldToScreen(p.x, p.y));
     const closed = isPolygonClosed && screenPoints.length > 2;
@@ -952,16 +966,19 @@ function drawShape(shapePoints, color, { preview = false } = {}) {
     ctx.save();
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = preview ? 2 : 3;
+    ctx.lineWidth = preview || ghost ? 2 : 3;
     ctx.lineJoin = 'round';
-    ctx.setLineDash(preview ? [6, 5] : []);
+    ctx.setLineDash(preview ? [6, 5] : ghost ? [2, 4] : []);
     if (preview) ctx.globalAlpha = 0.65;
+    if (ghost) ctx.globalAlpha = 0.4;
 
     if (screenPoints.length > 1) {
         ctx.beginPath();
         screenPoints.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
         if (closed) {
             ctx.closePath();
+        }
+        if (closed && !ghost) {
             const alpha = ctx.globalAlpha;
             ctx.globalAlpha = preview ? 0.06 : 0.14;
             ctx.fill();
@@ -973,8 +990,8 @@ function drawShape(shapePoints, color, { preview = false } = {}) {
     ctx.setLineDash([]);
     screenPoints.forEach(p => {
         ctx.beginPath();
-        if (preview) {
-            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        if (preview || ghost) {
+            ctx.arc(p.x, p.y, ghost ? 3 : 4, 0, Math.PI * 2);
             ctx.lineWidth = 2;
             ctx.stroke();
         } else {
@@ -1024,8 +1041,9 @@ function drawPointLabels(resultPoints) {
             height: LABEL_FONT_SIZE + LABEL_PADDING * 2
         };
     });
-    const labels = makeLabels(points, 'P', palette().original, 'above')
-        .concat(makeLabels(resultPoints, "P'", palette().result, 'below'));
+    const stage = compositionSteps.length;
+    const labels = makeLabels(points, stageName(stage), palette().original, 'above')
+        .concat(makeLabels(resultPoints, stageName(stage + 1), palette().result, 'below'));
     if (!labels.length) return;
 
     const positions = placeLabels(labels, {
@@ -1226,6 +1244,7 @@ function drawNow() {
     }
     drawGridAndAxes();
     drawHelpers();
+    compositionStages().forEach(stage => drawShape(stage, palette().original, { ghost: true }));
     const preview = previewPoints();
     if (preview) drawShape(preview, palette().result, { preview: true });
     drawShape(points, palette().original);
@@ -1345,6 +1364,7 @@ function applyTransform() {
 // ==================== MANAJEMEN TITIK ====================
 
 function setShape(newPoints, closed) {
+    clearComposition();
     points = clonePoints(newPoints);
     transformedPoints = [];
     resultMeta = null;
@@ -1435,13 +1455,95 @@ function updateCoordinateTable() {
         const row = document.createElement('tr');
         row.dataset.index = String(i);
         if (i === hoveredIndex) row.classList.add('is-highlighted');
-        row.appendChild(createCell(`P${i + 1}`, 'font-medium'));
+        row.appendChild(createCell(`${stageName(compositionSteps.length)}${i + 1}`, 'font-medium'));
         row.appendChild(createCell(format(points[i])));
         row.appendChild(createCell(format(transformedPoints[i])));
         fragment.appendChild(row);
     }
     coordinateTableBody.replaceChildren(fragment);
+    $('chainTransform').disabled = !(resultMeta && transformedPoints.length);
     updateFormula();
+}
+
+// ==================== KOMPOSISI TRANSFORMASI ====================
+
+// Nama tahap: P, P', P'', P''', lalu P(4), P(5), ...
+function stageName(stage) {
+    return stage <= 3 ? `P${"'".repeat(stage)}` : `P(${stage})`;
+}
+
+// Bentuk dari tahap-tahap sebelumnya (tanpa tahap sekarang).
+function compositionStages() {
+    if (!compositionOrigin) return [];
+    const stages = [];
+    let current = compositionOrigin;
+    compositionSteps.forEach(step => {
+        stages.push(current);
+        current = GeometryTransformations.apply(current, step.transform, step.params);
+    });
+    return stages;
+}
+
+function clearComposition() {
+    compositionSteps = [];
+    compositionOrigin = null;
+}
+
+// Hasil sekarang menjadi bentuk berikutnya; langkahnya dicatat.
+function chainTransform() {
+    if (!resultMeta || !transformedPoints.length) {
+        showMessage('Terapkan transformasi terlebih dahulu!', 'error');
+        return;
+    }
+    stopAnimation();
+    if (!compositionSteps.length) compositionOrigin = clonePoints(points);
+    compositionSteps.push({ transform: resultMeta.transform, params: { ...resultMeta.params } });
+    points = clonePoints(transformedPoints);
+    transformedPoints = [];
+    resultMeta = null;
+    saveHistory();
+    updateTransformStatus();
+    updateCoordinateTable();
+    redrawCanvas();
+    showMessage(`Langkah ${compositionSteps.length + 1}: pilih transformasi berikutnya untuk ${stageName(compositionSteps.length)}`, 'success');
+}
+
+function resetComposition() {
+    if (!compositionOrigin) return;
+    points = clonePoints(compositionOrigin);
+    clearComposition();
+    transformedPoints = [];
+    resultMeta = null;
+    saveHistory();
+    ensureVisible();
+    updateTransformStatus();
+    updateCoordinateTable();
+    redrawCanvas();
+    showMessage('Kembali ke bentuk awal', 'success');
+}
+
+function updateCompositionRow() {
+    const row = $('compositionRow');
+    row.hidden = compositionSteps.length === 0;
+    if (row.hidden) return;
+
+    const list = $('compositionSteps');
+    list.replaceChildren();
+    const params = getTransformParams(currentTransform);
+    const steps = compositionSteps.concat({ transform: currentTransform, params, pending: !resultMeta });
+    steps.forEach(step => {
+        const item = document.createElement('li');
+        item.textContent = describeTransform(step.transform, step.params);
+        if (step.pending) item.classList.add('is-pending');
+        list.appendChild(item);
+    });
+
+    // Rumus gabungan dari bentuk awal sampai hasil (atau pratinjau) langkah sekarang.
+    const invalid = currentTransform === 'dilation' && params.factor === 0;
+    const all = compositionSteps.concat({ transform: currentTransform, params });
+    $('compositionRule').textContent = invalid
+        ? '-'
+        : formatAffineRule(affineCoefficients(p => GeometryTransformations.applySteps([p], all)[0]));
 }
 
 // ==================== KARTU RUMUS ====================
@@ -1483,6 +1585,7 @@ function renderMatrix(container, form) {
 }
 
 function updateFormula() {
+    updateCompositionRow();
     const params = getTransformParams(currentTransform);
     const general = generalRule(currentTransform, params);
     formulaEls.title.textContent = transformNames[currentTransform];
@@ -1507,10 +1610,11 @@ function updateFormula() {
     const format = (name, p) => `${name}(${formatCoordinate(p.x)}, ${formatCoordinate(p.y)})`;
     const original = document.createElement('span');
     original.className = 'formula-example-original';
-    original.textContent = format('P1', points[0]);
+    const stage = compositionSteps.length;
+    original.textContent = format(`${stageName(stage)}1`, points[0]);
     const result = document.createElement('span');
     result.className = 'formula-example-result';
-    result.textContent = format("P'1", image);
+    result.textContent = format(`${stageName(stage + 1)}1`, image);
     example.append(original, ' → ', result);
 }
 
