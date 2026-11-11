@@ -314,12 +314,6 @@ footer {
     }
 }
 
-/* ========== DARK MODE ENFORCEMENT ========== */
-@media (prefers-color-scheme: light) {
-    body {
-        background: linear-gradient(to bottom right, #1e3a8a, #1e40af, #1e3a8a) !important;
-    }
-}
 
 /* ========== HIGH CONTRAST MODE ========== */
 @media (prefers-contrast: high) {
@@ -1414,4 +1408,288 @@ body[data-transform="translation"] {
     border-color: var(--accent);
     background: var(--accent-strong);
     color: #fff;
+}
+
+/* ========== GELEMBUNG NILAI SLIDER ========== */
+.range-wrap {
+    position: relative;
+    padding-top: 2rem;
+}
+
+.range-input {
+    display: block;
+    width: 100%;
+}
+
+.range-bubble {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    padding: 0.1rem 0.5rem;
+    border-radius: 0.45rem;
+    background: var(--accent-strong);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
+.range-bubble::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -0.3rem;
+    border: 0.3rem solid transparent;
+    border-bottom: 0;
+    border-top-color: var(--accent-strong);
+    transform: translateX(-50%);
+}
+
+/* ========== MATRIKS DI KARTU RUMUS ========== */
+.formula-matrix {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.matrix {
+    display: inline-grid;
+    gap: 0.05rem 0.7rem;
+    padding: 0.15rem 0.45rem;
+    border-right: 2px solid currentColor;
+    border-left: 2px solid currentColor;
+    border-radius: 0.35rem;
+    color: #fde68a;
+    font-family: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    text-align: right;
+}
+
+.matrix-symbol {
+    color: var(--app-muted);
+    font-weight: 700;
+}
+
+/* ========== ANGKA TABEL RATA ========== */
+#coordinateTableBody td:nth-child(n + 2) {
+    font-family: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ========== KANVAS TEMA GELAP ========== */
+[data-theme="dark"] .canvas-shell {
+    border-color: #1e293b;
+    background: #0b1324 !important;
+    box-shadow: 0 12px 24px rgba(2, 6, 23, 0.3) !important;
+}
+
+[data-theme="dark"] .canvas-status,
+[data-theme="dark"] .canvas-toggle,
+[data-theme="dark"] .canvas-tool,
+[data-theme="dark"] .canvas-legend {
+    border-color: rgba(148, 163, 184, 0.25);
+    background: rgba(15, 23, 42, 0.9);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .canvas-tool:hover {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .legend-original { background: #60a5fa; }
+[data-theme="dark"] .legend-result { background: #fbbf24; }
+[data-theme="dark"] .legend-preview { border-color: #fbbf24; background: transparent; }
+
+/* ========== TEMA TERANG ========== */
+[data-theme="light"] body.app-shell {
+    background: radial-gradient(circle at 15% 0%, #dbeafe 0, transparent 40%), #eef2f7 !important;
+    color: #0f172a;
+}
+
+[data-theme="light"] .app-shell header,
+[data-theme="light"] .app-shell footer,
+[data-theme="light"] .visualization-panel,
+[data-theme="light"] .control-panel,
+[data-theme="light"] .transform-tabs {
+    border-color: #e2e8f0 !important;
+    background: #ffffff !important;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] .app-header-title,
+[data-theme="light"] .control-title,
+[data-theme="light"] .card-title,
+[data-theme="light"] .formula-heading,
+[data-theme="light"] .sheet-toggle,
+[data-theme="light"] .practice-question,
+[data-theme="light"] .visualization-panel .text-white,
+[data-theme="light"] .control-panel .text-white {
+    color: #0f172a;
+}
+
+[data-theme="light"] .app-header-subtitle,
+[data-theme="light"] .canvas-hint,
+[data-theme="light"] .app-shell footer .text-blue-50,
+[data-theme="light"] .app-shell footer .text-blue-100,
+[data-theme="light"] .visualization-panel .text-blue-100,
+[data-theme="light"] .visualization-panel .text-blue-200,
+[data-theme="light"] .visualization-panel .text-blue-300,
+[data-theme="light"] .control-panel .text-blue-100,
+[data-theme="light"] .control-panel .text-blue-200 {
+    color: #475569;
+}
+
+[data-theme="light"] .app-header-help {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+}
+
+[data-theme="light"] .app-header-help:hover {
+    background: #e2e8f0;
+}
+
+[data-theme="light"] .transform-tab {
+    color: #475569;
+}
+
+[data-theme="light"] .transform-tab:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+[data-theme="light"] .transform-tab.is-active {
+    background: #eff6ff;
+    color: #0f172a;
+}
+
+[data-theme="light"] .param-title {
+    color: var(--accent-strong);
+}
+
+[data-theme="light"] .sheet-toggle .sheet-toggle-title i,
+[data-theme="light"] .axis-option-line {
+    color: var(--accent-strong);
+    stroke: var(--accent-strong);
+}
+
+[data-theme="light"] #sheetParams,
+[data-theme="light"] .shape-card,
+[data-theme="light"] .practice-card,
+[data-theme="light"] .table-card {
+    border-color: #e2e8f0 !important;
+    background: #f8fafc !important;
+}
+
+[data-theme="light"] .control-panel input[type="number"],
+[data-theme="light"] .field {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+}
+
+[data-theme="light"] .field::placeholder {
+    color: #94a3b8;
+}
+
+[data-theme="light"] .btn-ghost,
+[data-theme="light"] .axis-option,
+[data-theme="light"] .quick-value,
+[data-theme="light"] .shape-chip {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+}
+
+[data-theme="light"] .btn-ghost:hover:not(:disabled),
+[data-theme="light"] .axis-option:hover {
+    background: #f1f5f9;
+}
+
+[data-theme="light"] .axis-option.is-selected {
+    border-color: var(--accent-strong);
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+[data-theme="light"] .axis-option-axes {
+    stroke: #94a3b8;
+}
+
+[data-theme="light"] .quick-value.is-selected {
+    border-color: var(--accent-strong);
+    background: var(--accent-strong);
+    color: #ffffff;
+}
+
+[data-theme="light"] .btn-danger {
+    border-color: #fecaca;
+    background: #ffffff;
+    color: #dc2626;
+}
+
+[data-theme="light"] .btn-danger:hover {
+    background: #fef2f2;
+}
+
+[data-theme="light"] .danger-zone {
+    border-color: #cbd5e1;
+}
+
+[data-theme="light"] .sheet-grip {
+    background: #cbd5e1;
+}
+
+[data-theme="light"] .formula-card {
+    border-color: #fcd34d;
+    background: linear-gradient(135deg, #fffbeb, #ffffff);
+}
+
+[data-theme="light"] .formula-row dt,
+[data-theme="light"] .formula-note,
+[data-theme="light"] .matrix-symbol,
+[data-theme="light"] .formula-example-empty {
+    color: #64748b;
+}
+
+[data-theme="light"] .formula-row dd {
+    color: #0f172a;
+}
+
+[data-theme="light"] .formula-row code,
+[data-theme="light"] .matrix {
+    color: #b45309;
+}
+
+[data-theme="light"] .formula-example-original { color: #0369a1; }
+[data-theme="light"] .formula-example-result { color: #b45309; }
+
+[data-theme="light"] .shape-card code {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+[data-theme="light"] .practice-question strong { color: #0369a1; }
+
+[data-theme="light"] .practice-score {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+[data-theme="light"] .practice-feedback.is-correct { color: #16a34a; }
+[data-theme="light"] .practice-feedback.is-wrong { color: #dc2626; }
+
+[data-theme="light"] #coordinateTable thead th {
+    color: #ffffff;
+}
+
+[data-theme="light"] #coordinateTableBody {
+    background: #ffffff;
+}
+
+[data-theme="light"] #coordinateTableBody tr {
+    border-color: #e2e8f0;
 }

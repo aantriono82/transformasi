@@ -400,3 +400,26 @@ test('latihan refleksi: lihat di kanvas memilih garis yang benar', async ({ page
     await expect(page.locator('.axis-option:has(input[value="y=k"])')).toHaveClass(/is-selected/);
     expect(await readTable(page)).toEqual([['P1', '(3, 1)', '(3, 3)']]);
 });
+
+test('tombol tema mengganti tema, tersimpan, dan mengubah latar kanvas', async ({ page }) => {
+    const html = page.locator('html');
+    await expect(html).toHaveAttribute('data-theme', 'light'); // mengikuti preferensi sistem (terang)
+    const corner = () => page.evaluate(() => Array.from(ctx.getImageData(2, 2, 1, 1).data.slice(0, 3)));
+    expect(Math.min(...await corner())).toBeGreaterThan(200);
+
+    await page.locator('#themeToggle').click();
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('#themeToggle')).toHaveAttribute('aria-label', 'Ganti ke tema terang');
+    expect(Math.max(...await corner())).toBeLessThan(60);
+
+    await page.reload();
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+});
+
+test('kartu rumus menampilkan bentuk matriks', async ({ page }) => {
+    await page.locator('#tab-dilation').click();
+    await page.locator('#dilationCenterX').fill('1');
+    await expect(page.locator('#formulaMatrix .matrix')).toHaveCount(4);
+    await expect(page.locator('#formulaMatrix .matrix').nth(1)).toHaveText('2002');
+    await expect(page.locator('#formulaMatrix .matrix').nth(3)).toHaveText('-10');
+});

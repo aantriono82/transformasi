@@ -223,3 +223,18 @@ test('checkAnswer menerima format bebas dan menolak teks tidak valid', () => {
     assert.deepEqual(checkAnswer(q, '(2, 3.5)'), { valid: true, correct: false });
     assert.deepEqual(checkAnswer(q, 'dua'), { valid: false, correct: false });
 });
+
+test('affineMatrix memberi matriks dan vektor translasi', () => {
+    const { affineCoefficients, affineMatrix } = require('../utils.js');
+    const { apply } = require('../transformations.js');
+    const of = (type, params) => affineMatrix(affineCoefficients(p => apply([p], type, params)[0]));
+    assert.deepEqual(of('rotation', { angle: 90, centerX: 0, centerY: 0 }),
+        { matrix: [[0, -1], [1, 0]], translation: null, exact: true });
+    assert.deepEqual(of('dilation', { factor: 2, centerX: 1, centerY: 0 }),
+        { matrix: [[2, 0], [0, 2]], translation: [-1, 0], exact: true });
+    assert.deepEqual(of('translation', { tx: 4, ty: -3 }),
+        { matrix: [[1, 0], [0, 1]], translation: [4, -3], exact: true });
+    const r30 = of('rotation', { angle: 30, centerX: 0, centerY: 0 });
+    assert.equal(r30.exact, false);
+    assert.deepEqual(r30.matrix, [[0.87, -0.5], [0.5, 0.87]]);
+});

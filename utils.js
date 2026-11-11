@@ -180,6 +180,18 @@
         return `(x, y) → ${exact ? '' : '≈ '}(${formatLinear(k.a, k.b, k.e)}, ${formatLinear(k.c, k.d, k.f)})`;
     }
 
+    /**
+     * Bentuk matriks: (x', y') = M·(x, y) + t. Nilai dibulatkan 2 desimal;
+     * exact=false bila ada pembulatan. translation=null bila t = (0, 0).
+     */
+    function affineMatrix(k) {
+        const values = [k.a, k.b, k.c, k.d, k.e, k.f];
+        const exact = values.every(v => Math.abs(v - round2(v)) < 1e-9);
+        const clean = (v) => (round2(v) === 0 ? 0 : round2(v));
+        const translation = round2(k.e) === 0 && round2(k.f) === 0 ? null : [clean(k.e), clean(k.f)];
+        return { matrix: [[clean(k.a), clean(k.b)], [clean(k.c), clean(k.d)]], translation, exact };
+    }
+
     /** Rumus umum (simbolik) beserta keterangan nilai simbolnya. */
     function generalRule(type, params = {}) {
         const point = (x, y) => `(${formatCoordinate(x)}, ${formatCoordinate(y)})`;
@@ -405,7 +417,7 @@
     const api = {
         parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, describeLine,
         worldToScreen, screenToWorld, createHistory, snapshotTransform, placeLabels, boxesOverlap,
-        affineCoefficients, formatLinear, formatAffineRule, generalRule, createQuestion, checkAnswer
+        affineCoefficients, formatLinear, formatAffineRule, affineMatrix, generalRule, createQuestion, checkAnswer
     };
     global.AppUtils = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
