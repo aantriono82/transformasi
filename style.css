@@ -634,3 +634,39 @@ button:disabled {
         height: 2.75rem !important;
     }
 }
+
+/* ========== BANNER VERSI BARU (SERVICE WORKER) ========== */
+.update-banner {
+    position: fixed;
+    left: 50%;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: calc(100vw - 2rem);
+    padding: 0.75rem 0.75rem 0.75rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: #0f172a;
+    color: #f8fafc;
+    font-weight: 600;
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.45);
+    transform: translateX(-50%);
+}
+
+.update-banner button {
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    background: #f59e0b;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.update-banner .update-banner-dismiss {
+    padding: 0.2rem 0.55rem;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 1.25rem;
+    line-height: 1;
+}

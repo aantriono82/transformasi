@@ -93,6 +93,7 @@ function init() {
     syncParamDisplays();
     initShareButtons();
     initBackToTop();
+    registerServiceWorker();
 
     // Mulai dengan kanvas kosong; simpan sebagai titik awal riwayat undo
     saveHistory();
@@ -1136,6 +1137,72 @@ function initBackToTop() {
         const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     });
+}
+
+// ==================== MODE OFFLINE (SERVICE WORKER) ====================
+
+// Di localhost SW tidak dipasang agar perubahan saat pengembangan langsung
+// terlihat; tambahkan ?sw pada URL untuk mengujinya secara lokal.
+function shouldRegisterServiceWorker() {
+    if (!('serviceWorker' in navigator) || location.protocol === 'file:') return false;
+    const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+    return !isLocal || new URLSearchParams(location.search).has('sw');
+}
+
+function registerServiceWorker() {
+    if (!shouldRegisterServiceWorker()) return;
+    // Muat ulang hanya bila pengguna meminta pembaruan. controllerchange juga
+    // terjadi saat SW pertama kali mengambil alih (clients.claim), dan saat itu
+    // halaman tidak boleh dimuat ulang agar pekerjaan di kanvas tidak hilang.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (updateRequested) location.reload();
+    });
+
+    navigator.serviceWorker.register('sw.js').then((registration) => {
+        const offerUpdate = (worker) => {
+            if (worker && navigator.serviceWorker.controller) showUpdateBanner(worker);
+        };
+        offerUpdate(registration.waiting);
+        registration.addEventListener('updatefound', () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', () => {
+                if (worker.state === 'installed') offerUpdate(worker);
+            });
+        });
+    }).catch((error) => console.error('Service worker gagal didaftarkan:', error));
+}
+
+let updateRequested = false;
+
+// Versi baru tidak langsung diaktifkan agar pekerjaan di kanvas tidak hilang
+// tiba-tiba; pengguna memilih kapan memuat ulang.
+function showUpdateBanner(worker) {
+    if (document.getElementById('updateBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'updateBanner';
+    banner.className = 'update-banner';
+    banner.setAttribute('role', 'status');
+
+    const text = document.createElement('span');
+    text.textContent = 'Versi baru aplikasi tersedia.';
+    const reloadButton = document.createElement('button');
+    reloadButton.type = 'button';
+    reloadButton.textContent = 'Muat ulang';
+    reloadButton.addEventListener('click', () => {
+        reloadButton.disabled = true;
+        updateRequested = true;
+        worker.postMessage('SKIP_WAITING');
+    });
+    const dismissButton = document.createElement('button');
+    dismissButton.type = 'button';
+    dismissButton.className = 'update-banner-dismiss';
+    dismissButton.setAttribute('aria-label', 'Nanti saja');
+    dismissButton.textContent = '×';
+    dismissButton.addEventListener('click', () => banner.remove());
+
+    banner.append(text, reloadButton, dismissButton);
+    document.body.appendChild(banner);
 }
 
 // ==================== INISIALISASI ====================
