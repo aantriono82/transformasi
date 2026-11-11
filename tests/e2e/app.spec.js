@@ -423,3 +423,33 @@ test('kartu rumus menampilkan bentuk matriks', async ({ page }) => {
     await expect(page.locator('#formulaMatrix .matrix').nth(1)).toHaveText('2002');
     await expect(page.locator('#formulaMatrix .matrix').nth(3)).toHaveText('-10');
 });
+
+test('komposisi: refleksi lalu rotasi, undo, dan kembali ke bentuk awal', async ({ page }) => {
+    await expect(page.locator('#chainTransform')).toBeDisabled();
+    await page.locator('#manualPointInput').fill('(2, 3)');
+    await page.locator('#addManualPoint').click();
+    await page.locator('#applyTransform').click(); // refleksi sumbu X → (2, -3)
+    await expect(page.locator('#chainTransform')).toBeEnabled();
+
+    await page.locator('#chainTransform').click();
+    expect(await readTable(page)).toEqual([["P'1", '(2, -3)', '-']]);
+    await expect(page.locator('#compositionRow')).toBeVisible();
+    await expect(status(page)).toHaveText('Langkah 2: Refleksi terhadap sumbu X');
+
+    await page.locator('#tab-rotation').click(); // rotasi 90° → (3, 2)
+    await page.locator('#applyTransform').click();
+    expect(await readTable(page)).toEqual([["P'1", '(2, -3)', '(3, 2)']]);
+    await expect(page.locator('#compositionSteps li')).toHaveText([
+        'Refleksi terhadap sumbu X',
+        'Rotasi 90° dengan pusat (0, 0)'
+    ]);
+    // Refleksi X lalu rotasi 90° = refleksi terhadap y = x.
+    await expect(page.locator('#compositionRule')).toHaveText('(x, y) → (y, x)');
+
+    await page.locator('#undoAction').click();
+    expect(await readTable(page)).toEqual([["P'1", '(2, -3)', '-']]);
+
+    await page.locator('#compositionReset').click();
+    expect(await readTable(page)).toEqual([['P1', '(2, 3)', '-']]);
+    await expect(page.locator('#compositionRow')).toBeHidden();
+});

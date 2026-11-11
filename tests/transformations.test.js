@@ -86,3 +86,15 @@ test('interpolate rotasi menjaga jarak ke pusat di tengah animasi', () => {
     const [mid] = interpolate([{ x: 3, y: 0 }], 'rotation', { angle: 90, centerX: 0, centerY: 0 }, 0.5);
     assert.ok(Math.abs(Math.hypot(mid.x, mid.y) - 3) < 1e-9);
 });
+
+test('applySteps menerapkan langkah berurutan (komposisi)', () => {
+    const { applySteps } = require('../transformations.js');
+    const steps = [
+        { transform: 'reflection', params: { axis: 'x' } },
+        { transform: 'rotation', params: { angle: 90, centerX: 0, centerY: 0 } }
+    ];
+    // (2, 3) → refleksi X → (2, -3) → rotasi 90° → (3, 2)
+    const [result] = applySteps([{ x: 2, y: 3 }], steps);
+    assert.ok(Math.abs(result.x - 3) < 1e-9 && Math.abs(result.y - 2) < 1e-9);
+    assert.deepEqual(applySteps([{ x: 1, y: 1 }], []), [{ x: 1, y: 1 }]);
+});

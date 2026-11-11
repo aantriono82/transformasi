@@ -73,7 +73,12 @@
         }
     }
 
-    const api = { reflect, rotate, dilate, translate, apply, interpolate };
+    /** Terapkan beberapa langkah berurutan: steps = [{ transform, params }]. */
+    function applySteps(points, steps = []) {
+        return steps.reduce((current, step) => apply(current, step.transform, step.params), points);
+    }
+
+    const api = { reflect, rotate, dilate, translate, apply, interpolate, applySteps };
     global.GeometryTransformations = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 }(typeof window !== 'undefined' ? window : globalThis));

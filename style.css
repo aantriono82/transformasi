@@ -1693,3 +1693,70 @@ body[data-transform="translation"] {
 [data-theme="light"] #coordinateTableBody tr {
     border-color: #e2e8f0;
 }
+
+/* ========== KOMPOSISI ========== */
+.formula-composition[hidden] {
+    display: none;
+}
+
+.composition-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+}
+
+.composition-steps li {
+    counter-increment: step;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.45);
+    font-size: 0.8rem;
+}
+
+.composition-steps li::before {
+    content: counter(step) ". ";
+    color: var(--app-orange);
+    font-weight: 800;
+}
+
+.composition-steps li.is-pending {
+    border-style: dashed;
+    opacity: 0.8;
+}
+
+.composition-total {
+    margin-top: 0.45rem;
+    color: var(--app-muted);
+    font-size: 0.85rem;
+}
+
+.composition-reset {
+    margin-top: 0.45rem;
+    color: #7dd3fc;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.btn-chain:not(:disabled) {
+    border-color: rgba(245, 158, 11, 0.55);
+    color: #fde68a;
+}
+
+[data-theme="light"] .composition-steps li {
+    border-color: #cbd5e1;
+    background: #ffffff;
+}
+
+[data-theme="light"] .composition-total { color: #64748b; }
+[data-theme="light"] .composition-reset { color: #0369a1; }
+
+[data-theme="light"] .btn-chain:not(:disabled) {
+    border-color: #f59e0b;
+    color: #b45309;
+}

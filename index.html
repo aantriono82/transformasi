@@ -196,6 +196,18 @@
                         <span>Rumus <span id="formulaTitle">refleksi</span></span>
                     </h3>
                     <dl class="formula-list">
+                        <div id="compositionRow" class="formula-row formula-composition" hidden>
+                            <dt>Komposisi</dt>
+                            <dd>
+                                <ol id="compositionSteps" class="composition-steps"></ol>
+                                <div class="composition-total">
+                                    Dari bentuk awal: <code id="compositionRule"></code>
+                                </div>
+                                <button id="compositionReset" type="button" class="composition-reset">
+                                    <i class="fas fa-rotate-left" aria-hidden="true"></i> Kembali ke bentuk awal
+                                </button>
+                            </dd>
+                        </div>
                         <div class="formula-row">
                             <dt>Umum</dt>
                             <dd><code id="formulaGeneral"></code><span id="formulaNote" class="formula-note"></span></dd>
@@ -478,6 +490,10 @@
 
                 <!-- Aksi sekunder -->
                 <div id="sheetActions" class="sheet-collapsible action-groups">
+                    <button id="chainTransform" type="button" class="btn-ghost btn-chain w-full" disabled
+                            title="Jadikan hasil sebagai bentuk berikutnya untuk komposisi transformasi">
+                        <i class="fas fa-forward" aria-hidden="true"></i><span>Lanjutkan dari Hasil</span>
+                    </button>
                     <div class="grid grid-cols-2 gap-2">
                         <button id="undoAction" type="button" class="btn-ghost" disabled>
                             <i class="fas fa-undo" aria-hidden="true"></i><span>Undo</span>
@@ -653,6 +669,7 @@
                     <li class="pl-2">Tambahkan minimal 3 titik dengan klik kanvas atau input manual</li>
                     <li class="pl-2">Titik akan otomatis terhubung dengan garis sesuai urutan</li>
                     <li class="pl-2">Klik "Tutup Poligon" untuk menghubungkan titik pertama dan terakhir</li>
+                    <li class="pl-2">Setelah menerapkan transformasi, "Lanjutkan dari Hasil" menjadikan bayangan sebagai bentuk berikutnya (komposisi transformasi, mis. refleksi lalu rotasi)</li>
                 </ol>
             </div>
             
