@@ -1,5 +1,5 @@
 // ==================== DEKLARASI ELEMEN DOM ====================
-const { parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform } = AppUtils;
+const { parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, createHistory, placeLabels } = AppUtils;
 
 const canvas = document.getElementById('transformCanvas');
 const ctx = canvas.getContext('2d');
@@ -31,8 +31,7 @@ let transformedPoints = [];
 let resultMeta = null;
 let isPolygonClosed = false;
 let currentTransform = 'reflection';
-let history = [];
-let historyIndex = -1;
+const history = createHistory();
 
 // Transformasi tampilan (pan dan zoom)
 const DEFAULT_SCALE = 30; // 1 unit = 30 piksel
@@ -71,18 +70,16 @@ function setupCanvasSize() {
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 }
 
+function currentView() {
+    return { width: canvasWidth, height: canvasHeight, scale: viewScale, offsetX: viewOffsetX, offsetY: viewOffsetY };
+}
+
 function worldToScreen(worldX, worldY) {
-    return {
-        x: canvasWidth / 2 + (worldX - viewOffsetX) * viewScale,
-        y: canvasHeight / 2 - (worldY - viewOffsetY) * viewScale
-    };
+    return AppUtils.worldToScreen(currentView(), worldX, worldY);
 }
 
 function screenToWorld(screenX, screenY) {
-    return {
-        x: viewOffsetX + (screenX - canvasWidth / 2) / viewScale,
-        y: viewOffsetY - (screenY - canvasHeight / 2) / viewScale
-    };
+    return AppUtils.screenToWorld(currentView(), screenX, screenY);
 }
 
 function init() {
@@ -301,7 +298,6 @@ function clonePoints(value) {
 }
 
 function saveHistory() {
-    history = history.slice(0, historyIndex + 1);
     history.push({
         points: clonePoints(points),
         transformedPoints: clonePoints(transformedPoints),
@@ -309,21 +305,17 @@ function saveHistory() {
         isPolygonClosed,
         transform: currentTransform
     });
-    historyIndex = history.length - 1;
     updateHistoryButtons();
 }
 
-function restoreHistory(index) {
-    const snapshot = history[index];
-    if (!snapshot) return;
+function restoreSnapshot(snapshot) {
     points = clonePoints(snapshot.points);
     transformedPoints = clonePoints(snapshot.transformedPoints);
     resultMeta = snapshot.resultMeta && { ...snapshot.resultMeta };
     isPolygonClosed = snapshot.isPolygonClosed;
-    historyIndex = index;
 
     // Hasil transformasi selalu ditampilkan di tab yang menghasilkannya.
-    const tabTransform = resultMeta ? resultMeta.transform : snapshot.transform;
+    const tabTransform = AppUtils.snapshotTransform(snapshot);
     const tab = transformTabs.find(item => item.dataset.transform === tabTransform);
     if (tab && tabTransform !== currentTransform) setActiveTab(tab, { keepResult: true });
 
@@ -333,22 +325,22 @@ function restoreHistory(index) {
 }
 
 function updateHistoryButtons() {
-    undoButton.disabled = historyIndex <= 0;
-    redoButton.disabled = historyIndex >= history.length - 1;
+    undoButton.disabled = !history.canUndo();
+    redoButton.disabled = !history.canRedo();
 }
 
 function undo() {
-    if (historyIndex > 0) {
-        restoreHistory(historyIndex - 1);
-        showMessage('Perubahan terakhir dibatalkan', 'success');
-    }
+    const snapshot = history.undo();
+    if (!snapshot) return;
+    restoreSnapshot(snapshot);
+    showMessage('Perubahan terakhir dibatalkan', 'success');
 }
 
 function redo() {
-    if (historyIndex < history.length - 1) {
-        restoreHistory(historyIndex + 1);
-        showMessage('Perubahan dipulihkan', 'success');
-    }
+    const snapshot = history.redo();
+    if (!snapshot) return;
+    restoreSnapshot(snapshot);
+    showMessage('Perubahan dipulihkan', 'success');
 }
 
 function exportCanvasImage() {
@@ -729,7 +721,7 @@ function ensureVisible(extraPoints = []) {
 
 // ==================== GAMBAR TITIK, GARIS, DAN ELEMEN BANTU ====================
 
-function drawShape(shapePoints, color, labelPrefix, labelOffsetY) {
+function drawShape(shapePoints, color) {
     if (!shapePoints.length) return;
     const screenPoints = shapePoints.map(p => worldToScreen(p.x, p.y));
 
@@ -744,16 +736,51 @@ function drawShape(shapePoints, color, labelPrefix, labelOffsetY) {
         if (isPolygonClosed && screenPoints.length > 2) ctx.closePath();
         ctx.stroke();
     }
-
-    ctx.font = `bold 14px ${CANVAS_FONT}`;
-    ctx.textAlign = 'left';
-    screenPoints.forEach((p, i) => {
+    screenPoints.forEach(p => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
         ctx.fill();
-        const point = shapePoints[i];
-        ctx.fillText(`${labelPrefix}${i + 1}(${formatCoordinate(point.x)}, ${formatCoordinate(point.y)})`, p.x + 8, p.y + labelOffsetY);
     });
+}
+
+const LABEL_FONT_SIZE = 13;
+const LABEL_PADDING = 3;
+
+// Label semua titik (asli dan hasil) ditempatkan bersama agar tidak saling
+// tumpuk, dengan latar semi-transparan supaya tetap terbaca di atas garis.
+function drawPointLabels() {
+    ctx.font = `bold ${LABEL_FONT_SIZE}px ${CANVAS_FONT}`;
+    const makeLabels = (shapePoints, prefix, color, prefer) => shapePoints.map((point, i) => {
+        const text = `${prefix}${i + 1}(${formatCoordinate(point.x)}, ${formatCoordinate(point.y)})`;
+        const screen = worldToScreen(point.x, point.y);
+        return {
+            text,
+            color,
+            prefer,
+            x: screen.x,
+            y: screen.y,
+            width: ctx.measureText(text).width + LABEL_PADDING * 2,
+            height: LABEL_FONT_SIZE + LABEL_PADDING * 2
+        };
+    });
+    const labels = makeLabels(points, 'P', COLORS.original, 'above')
+        .concat(makeLabels(transformedPoints, "P'", COLORS.result, 'below'));
+    if (!labels.length) return;
+
+    const positions = placeLabels(labels, {
+        bounds: { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
+    });
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    labels.forEach((label, i) => {
+        const { x, y } = positions[i];
+        ctx.fillStyle = 'rgba(248, 250, 252, 0.85)';
+        ctx.fillRect(x, y, label.width, label.height);
+        ctx.fillStyle = label.color;
+        ctx.fillText(label.text, x + LABEL_PADDING, y + LABEL_PADDING);
+    });
+    ctx.textBaseline = 'alphabetic';
 }
 
 function drawDashedSegment(a, b) {
@@ -853,8 +880,9 @@ function drawNow() {
     }
     drawGridAndAxes();
     drawHelpers();
-    drawShape(points, COLORS.original, 'P', -8);
-    drawShape(transformedPoints, COLORS.result, "P'", 20);
+    drawShape(points, COLORS.original);
+    drawShape(transformedPoints, COLORS.result);
+    drawPointLabels();
 }
 
 function redrawCanvas() {

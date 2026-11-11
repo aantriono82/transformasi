@@ -139,7 +139,126 @@
         }
     }
 
-    const api = { parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, describeLine };
+    // ==================== KONVERSI KOORDINAT ====================
+    // view = { width, height, scale, offsetX, offsetY }; sumbu Y layar terbalik.
+
+    function worldToScreen(view, x, y) {
+        return {
+            x: view.width / 2 + (x - view.offsetX) * view.scale,
+            y: view.height / 2 - (y - view.offsetY) * view.scale
+        };
+    }
+
+    function screenToWorld(view, x, y) {
+        return {
+            x: view.offsetX + (x - view.width / 2) / view.scale,
+            y: view.offsetY - (y - view.height / 2) / view.scale
+        };
+    }
+
+    // ==================== RIWAYAT UNDO/REDO ====================
+
+    /**
+     * Riwayat linear berbasis snapshot. Menambah snapshot setelah undo membuang
+     * cabang redo. `limit` membatasi jumlah snapshot yang disimpan.
+     */
+    function createHistory(limit = 200) {
+        let entries = [];
+        let index = -1;
+        return {
+            push(snapshot) {
+                entries = entries.slice(0, index + 1);
+                entries.push(snapshot);
+                if (entries.length > limit) entries = entries.slice(entries.length - limit);
+                index = entries.length - 1;
+                return snapshot;
+            },
+            undo() {
+                if (index <= 0) return null;
+                index -= 1;
+                return entries[index];
+            },
+            redo() {
+                if (index >= entries.length - 1) return null;
+                index += 1;
+                return entries[index];
+            },
+            current() { return index >= 0 ? entries[index] : null; },
+            canUndo() { return index > 0; },
+            canRedo() { return index < entries.length - 1; },
+            get size() { return entries.length; }
+        };
+    }
+
+    /** Tab yang harus aktif saat snapshot dipulihkan: tab asal hasil transformasi. */
+    function snapshotTransform(snapshot) {
+        return snapshot.resultMeta ? snapshot.resultMeta.transform : snapshot.transform;
+    }
+
+    // ==================== PENEMPATAN LABEL ====================
+
+    function boxesOverlap(a, b) {
+        return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    }
+
+    function overlapArea(a, b) {
+        const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+        const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+        return w > 0 && h > 0 ? w * h : 0;
+    }
+
+    /**
+     * Tempatkan label agar tidak saling tumpuk dan tidak menutupi titik.
+     * items: [{ x, y, width, height, prefer?: 'above'|'below' }] (koordinat layar
+     * titik, ukuran label). Hasil: [{ x, y }] = pojok kiri-atas setiap label.
+     * Bila tidak ada posisi bebas, dipilih posisi dengan tumpang-tindih terkecil.
+     */
+    function placeLabels(items, { gap = 8, dotRadius = 7, bounds = null } = {}) {
+        const dots = items.map(item => ({
+            x: item.x - dotRadius, y: item.y - dotRadius, width: dotRadius * 2, height: dotRadius * 2
+        }));
+        const placed = [];
+
+        return items.map(item => {
+            const { x, y, width: w, height: h } = item;
+            const above = { x: x + gap, y: y - gap - h };
+            const below = { x: x + gap, y: y + gap };
+            const candidates = [
+                ...(item.prefer === 'below' ? [below, above] : [above, below]),
+                { x: x - gap - w, y: y - gap - h },
+                { x: x - gap - w, y: y + gap },
+                { x: x + gap + 2, y: y - h / 2 },
+                { x: x - gap - 2 - w, y: y - h / 2 },
+                { x: x - w / 2, y: y - gap - 2 * h },
+                { x: x - w / 2, y: y + gap + h }
+            ];
+
+            let best = null;
+            let bestCost = Infinity;
+            for (const candidate of candidates) {
+                const box = { ...candidate, width: w, height: h };
+                let cost = 0;
+                for (const other of placed) cost += overlapArea(box, other);
+                for (const dot of dots) cost += overlapArea(box, dot) * 2;
+                if (bounds) {
+                    const outside = (box.width * box.height) - overlapArea(box, bounds);
+                    cost += outside * 0.5;
+                }
+                if (cost < bestCost) {
+                    bestCost = cost;
+                    best = box;
+                    if (cost === 0) break;
+                }
+            }
+            placed.push(best);
+            return { x: best.x, y: best.y };
+        });
+    }
+
+    const api = {
+        parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, describeLine,
+        worldToScreen, screenToWorld, createHistory, snapshotTransform, placeLabels, boxesOverlap
+    };
     global.AppUtils = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 }(typeof window !== 'undefined' ? window : globalThis));

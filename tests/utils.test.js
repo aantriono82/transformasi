@@ -84,3 +84,78 @@ test('describeTransform mengikuti parameter', () => {
     assert.equal(describeTransform('reflection', { axis: 'custom', m: -1, c: 0 }), 'Refleksi terhadap garis y = -x');
     assert.equal(describeTransform('reflection', { axis: 'x=h', k: 2 }), 'Refleksi terhadap garis x = 2');
 });
+
+const { worldToScreen, screenToWorld, createHistory, snapshotTransform, placeLabels, boxesOverlap } = require('../utils.js');
+
+test('worldToScreen dan screenToWorld saling invers', () => {
+    const view = { width: 600, height: 400, scale: 25, offsetX: 3, offsetY: -2 };
+    assert.deepEqual(worldToScreen(view, 3, -2), { x: 300, y: 200 }, 'pusat tampilan di tengah kanvas');
+    const s = worldToScreen(view, 5, 1);
+    assert.deepEqual(s, { x: 350, y: 125 }, 'sumbu Y layar terbalik');
+    const w = screenToWorld(view, s.x, s.y);
+    assert.ok(Math.abs(w.x - 5) < 1e-12 && Math.abs(w.y - 1) < 1e-12);
+});
+
+test('riwayat: undo, redo, dan cabang redo dibuang setelah push', () => {
+    const h = createHistory();
+    assert.equal(h.current(), null);
+    h.push('a'); h.push('b'); h.push('c');
+    assert.equal(h.canUndo(), true);
+    assert.equal(h.canRedo(), false);
+    assert.equal(h.undo(), 'b');
+    assert.equal(h.undo(), 'a');
+    assert.equal(h.undo(), null, 'tidak bisa undo melewati snapshot awal');
+    assert.equal(h.current(), 'a');
+    assert.equal(h.redo(), 'b');
+    h.push('d');
+    assert.equal(h.canRedo(), false, 'snapshot c terbuang');
+    assert.equal(h.size, 3);
+    assert.equal(h.undo(), 'b');
+    assert.equal(h.redo(), 'd');
+    assert.equal(h.redo(), null);
+});
+
+test('riwayat dibatasi jumlahnya', () => {
+    const h = createHistory(3);
+    [1, 2, 3, 4, 5].forEach(n => h.push(n));
+    assert.equal(h.size, 3);
+    assert.equal(h.undo(), 4);
+    assert.equal(h.undo(), 3);
+    assert.equal(h.undo(), null);
+});
+
+test('snapshot hasil transformasi dipulihkan ke tab asalnya', () => {
+    assert.equal(snapshotTransform({ transform: 'rotation', resultMeta: { transform: 'translation' } }), 'translation');
+    assert.equal(snapshotTransform({ transform: 'rotation', resultMeta: null }), 'rotation');
+});
+
+test('placeLabels: label titik berdekatan tidak saling tumpuk', () => {
+    // Titik asli dan bayangannya berimpit / berdekatan (kasus refleksi).
+    const items = [
+        { x: 100, y: 100, width: 80, height: 19, prefer: 'above' },
+        { x: 100, y: 100, width: 80, height: 19, prefer: 'below' },
+        { x: 110, y: 95, width: 80, height: 19, prefer: 'above' },
+        { x: 105, y: 108, width: 80, height: 19, prefer: 'below' }
+    ];
+    const positions = placeLabels(items);
+    const boxes = positions.map((p, i) => ({ ...p, width: items[i].width, height: items[i].height }));
+    for (let i = 0; i < boxes.length; i++) {
+        for (let j = i + 1; j < boxes.length; j++) {
+            assert.ok(!boxesOverlap(boxes[i], boxes[j]), `label ${i} dan ${j} bertumpuk`);
+        }
+    }
+});
+
+test('placeLabels memakai posisi pilihan bila tidak ada tabrakan', () => {
+    const [above, below] = placeLabels([
+        { x: 100, y: 100, width: 50, height: 19, prefer: 'above' },
+        { x: 400, y: 300, width: 50, height: 19, prefer: 'below' }
+    ]);
+    assert.deepEqual(above, { x: 108, y: 73 });
+    assert.deepEqual(below, { x: 408, y: 308 });
+});
+
+test('placeLabels menghindari keluar kanvas', () => {
+    const [pos] = placeLabels([{ x: 590, y: 5, width: 80, height: 19 }], { bounds: { x: 0, y: 0, width: 600, height: 400 } });
+    assert.ok(pos.x >= 0 && pos.x + 80 <= 600 && pos.y >= 0, JSON.stringify(pos));
+});
