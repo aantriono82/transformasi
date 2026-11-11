@@ -1,5 +1,8 @@
 // ==================== DEKLARASI ELEMEN DOM ====================
-const { parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, createHistory, placeLabels } = AppUtils;
+const {
+    parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, createHistory, placeLabels,
+    affineCoefficients, formatAffineRule, generalRule, createQuestion, checkAnswer
+} = AppUtils;
 
 const canvas = document.getElementById('transformCanvas');
 const ctx = canvas.getContext('2d');
@@ -8,21 +11,29 @@ const applyButton = $('applyTransform');
 const clearButton = $('clearPoints');
 const closePolygonButton = $('closePolygon');
 const resetButton = $('resetTransform');
-const sampleButton = $('sampleShape');
 const coordinateTableBody = $('coordinateTableBody');
 const resetViewButton = $('resetView');
 const zoomInButton = $('zoomIn');
 const zoomOutButton = $('zoomOut');
 const manualPointInput = $('manualPointInput');
 const addManualPointButton = $('addManualPoint');
-const loadPresetButton = $('loadPreset');
-const shapePreset = $('shapePreset');
 const undoButton = $('undoAction');
 const redoButton = $('redoAction');
 const exportButton = $('exportCanvas');
 const helpBtn = $('helpBtn');
 const helpModal = $('helpModal');
 const announcer = $('srAnnouncer');
+const showCoordinatesInput = $('showCoordinates');
+const controlPanel = $('controlPanel');
+const sheetToggle = $('sheetToggle');
+const smallScreen = window.matchMedia('(max-width: 1023px)');
+const formulaEls = {
+    title: $('formulaTitle'),
+    general: $('formulaGeneral'),
+    note: $('formulaNote'),
+    specific: $('formulaSpecific'),
+    example: $('formulaExample')
+};
 
 // ==================== VARIABEL GLOBAL ====================
 let points = [];
@@ -32,6 +43,12 @@ let resultMeta = null;
 let isPolygonClosed = false;
 let currentTransform = 'reflection';
 const history = createHistory();
+
+// Indeks titik yang disorot (kanvas atau tabel); label lengkap & cincin sorot.
+let hoveredIndex = null;
+// Animasi bentuk asli menuju bayangannya setelah "Terapkan Transformasi".
+let animation = null;
+const ANIMATION_MS = 750;
 
 // Transformasi tampilan (pan dan zoom)
 const DEFAULT_SCALE = 30; // 1 unit = 30 piksel
@@ -50,7 +67,8 @@ const COLORS = {
     original: '#2196f3',
     result: '#ff9800',
     helper: '#9333ea',
-    axis: '#333'
+    axis: '#333',
+    highlight: '#f43f5e'
 };
 const transformNames = {
     reflection: 'refleksi',
@@ -92,6 +110,7 @@ function init() {
     setActiveTab(findTabByHash(location.hash) || transformTabs[0], { updateHash: false, record: false });
     syncParamDisplays();
     initShareButtons();
+    initPractice();
     initBackToTop();
     registerServiceWorker();
 
@@ -155,6 +174,8 @@ function handleTabKeydown(event) {
 function updateTransformStatus() {
     const status = document.querySelector('.canvas-status');
     if (status) status.textContent = describeTransform(currentTransform, getTransformParams(currentTransform));
+    $('sheetTitle').textContent = `Atur ${transformNames[currentTransform]}`;
+    updateFormula();
 }
 
 // ==================== MODAL PETUNJUK ====================
@@ -226,6 +247,7 @@ function setupEventListeners() {
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
+    canvas.addEventListener('pointerleave', () => setHovered(null));
     canvas.addEventListener('wheel', handleCanvasWheel, { passive: false });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     canvas.addEventListener('keydown', handleCanvasKeydown);
@@ -243,14 +265,25 @@ function setupEventListeners() {
     clearButton.addEventListener('click', clearPoints);
     closePolygonButton.addEventListener('click', closePolygon);
     resetButton.addEventListener('click', resetTransform);
-    sampleButton.addEventListener('click', createSampleShape);
-    loadPresetButton.addEventListener('click', loadSelectedPreset);
+    document.querySelectorAll('.shape-chip').forEach(chip => {
+        chip.addEventListener('click', () => loadPreset(chip.dataset.preset));
+    });
+    sheetToggle.addEventListener('click', () => setSheetExpanded(controlPanel.classList.contains('is-collapsed')));
     undoButton.addEventListener('click', undo);
     redoButton.addEventListener('click', redo);
     exportButton.addEventListener('click', exportCanvasImage);
     resetViewButton.addEventListener('click', resetView);
     zoomInButton.addEventListener('click', () => zoomAt(1.25));
     zoomOutButton.addEventListener('click', () => zoomAt(0.8));
+
+    showCoordinatesInput.addEventListener('change', redrawCanvas);
+
+    // Menyorot baris tabel juga menyorot titik asli dan bayangannya di kanvas.
+    coordinateTableBody.addEventListener('pointerover', (event) => {
+        const row = event.target.closest('tr[data-index]');
+        setHovered(row ? Number(row.dataset.index) : null);
+    });
+    coordinateTableBody.addEventListener('pointerleave', () => setHovered(null));
 
     addManualPointButton.addEventListener('click', addManualPoint);
     manualPointInput.addEventListener('keydown', (e) => {
@@ -299,6 +332,7 @@ function clonePoints(value) {
 }
 
 function saveHistory() {
+    stopAnimation();
     history.push({
         points: clonePoints(points),
         transformedPoints: clonePoints(transformedPoints),
@@ -310,6 +344,7 @@ function saveHistory() {
 }
 
 function restoreSnapshot(snapshot) {
+    stopAnimation();
     points = clonePoints(snapshot.points);
     transformedPoints = clonePoints(snapshot.transformedPoints);
     resultMeta = snapshot.resultMeta && { ...snapshot.resultMeta };
@@ -524,18 +559,6 @@ function showMessage(message, type) {
     messageElement.className = `temp-message ${type}`;
     messageElement.setAttribute('aria-hidden', 'true'); // dibacakan lewat #srAnnouncer
     messageElement.textContent = message;
-    const isSuccess = type === 'success';
-    messageElement.style.cssText = `
-        position: fixed;
-        padding: 15px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        color: white;
-        background-color: ${isSuccess ? 'rgba(46, 125, 50, 0.95)' : 'rgba(198, 40, 40, 0.95)'};
-        border-left: 5px solid ${isSuccess ? '#4CAF50' : '#F44336'};
-    `;
     document.body.appendChild(messageElement);
     announce(message);
 
@@ -593,8 +616,37 @@ function handlePointerDown(event) {
     }
 }
 
+function setHovered(index) {
+    if (index === hoveredIndex) return;
+    hoveredIndex = index;
+    coordinateTableBody.querySelectorAll('tr[data-index]').forEach(row => {
+        row.classList.toggle('is-highlighted', Number(row.dataset.index) === index);
+    });
+    redrawCanvas();
+}
+
+const HOVER_RADIUS = 12; // piksel
+
+// Cari titik (asli atau bayangan) terdekat dari kursor.
+function pointIndexAt(position) {
+    let best = null;
+    let bestDistance = HOVER_RADIUS;
+    [points, transformedPoints].forEach(list => list.forEach((point, index) => {
+        const screen = worldToScreen(point.x, point.y);
+        const distance = Math.hypot(screen.x - position.x, screen.y - position.y);
+        if (distance <= bestDistance) {
+            bestDistance = distance;
+            best = index;
+        }
+    }));
+    return best;
+}
+
 function handlePointerMove(event) {
-    if (!activePointers.has(event.pointerId)) return;
+    if (!activePointers.has(event.pointerId)) {
+        if (event.pointerType === 'mouse') setHovered(pointIndexAt(pointerPosition(event)));
+        return;
+    }
     event.preventDefault();
     const position = pointerPosition(event);
     activePointers.set(event.pointerId, position);
@@ -722,37 +774,76 @@ function ensureVisible(extraPoints = []) {
 
 // ==================== GAMBAR TITIK, GARIS, DAN ELEMEN BANTU ====================
 
-function drawShape(shapePoints, color) {
+// Gambar poligon/polyline. Pratinjau digambar putus-putus dan transparan.
+function drawShape(shapePoints, color, { preview = false } = {}) {
     if (!shapePoints.length) return;
     const screenPoints = shapePoints.map(p => worldToScreen(p.x, p.y));
+    const closed = isPolygonClosed && screenPoints.length > 2;
 
+    ctx.save();
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([]);
+    ctx.lineWidth = preview ? 2 : 3;
+    ctx.lineJoin = 'round';
+    ctx.setLineDash(preview ? [6, 5] : []);
+    if (preview) ctx.globalAlpha = 0.65;
 
     if (screenPoints.length > 1) {
         ctx.beginPath();
         screenPoints.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-        if (isPolygonClosed && screenPoints.length > 2) ctx.closePath();
+        if (closed) {
+            ctx.closePath();
+            const alpha = ctx.globalAlpha;
+            ctx.globalAlpha = preview ? 0.06 : 0.14;
+            ctx.fill();
+            ctx.globalAlpha = alpha;
+        }
         ctx.stroke();
     }
+
+    ctx.setLineDash([]);
     screenPoints.forEach(p => {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-        ctx.fill();
+        if (preview) {
+            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
     });
+    ctx.restore();
+}
+
+// Cincin sorot pada titik asli dan bayangannya yang berindeks sama.
+function drawHighlight(resultPoints) {
+    if (hoveredIndex === null) return;
+    ctx.save();
+    ctx.strokeStyle = COLORS.highlight;
+    ctx.lineWidth = 2.5;
+    [points[hoveredIndex], resultPoints[hoveredIndex]].forEach(point => {
+        if (!point) return;
+        const p = worldToScreen(point.x, point.y);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+        ctx.stroke();
+    });
+    ctx.restore();
 }
 
 const LABEL_FONT_SIZE = 13;
 const LABEL_PADDING = 3;
 
-// Label semua titik (asli dan hasil) ditempatkan bersama agar tidak saling
-// tumpuk, dengan latar semi-transparan supaya tetap terbaca di atas garis.
-function drawPointLabels() {
+// Label ringkas (P1, P'1) agar kanvas tidak penuh. Koordinat lengkap tampil
+// untuk titik yang disorot, atau untuk semua titik bila "Koordinat" dicentang.
+function drawPointLabels(resultPoints) {
     ctx.font = `bold ${LABEL_FONT_SIZE}px ${CANVAS_FONT}`;
+    const showAll = showCoordinatesInput.checked;
     const makeLabels = (shapePoints, prefix, color, prefer) => shapePoints.map((point, i) => {
-        const text = `${prefix}${i + 1}(${formatCoordinate(point.x)}, ${formatCoordinate(point.y)})`;
+        const full = showAll || i === hoveredIndex;
+        const name = `${prefix}${i + 1}`;
+        const text = full ? `${name}(${formatCoordinate(point.x)}, ${formatCoordinate(point.y)})` : name;
         const screen = worldToScreen(point.x, point.y);
         return {
             text,
@@ -765,7 +856,7 @@ function drawPointLabels() {
         };
     });
     const labels = makeLabels(points, 'P', COLORS.original, 'above')
-        .concat(makeLabels(transformedPoints, "P'", COLORS.result, 'below'));
+        .concat(makeLabels(resultPoints, "P'", COLORS.result, 'below'));
     if (!labels.length) return;
 
     const positions = placeLabels(labels, {
@@ -856,7 +947,7 @@ function drawHelpers() {
     }
 
     // Garis bantu antara titik asli dan bayangannya.
-    if (resultMeta && transformedPoints.length === points.length) {
+    if (resultMeta && !animation && transformedPoints.length === points.length) {
         ctx.globalAlpha = 0.55;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 4]);
@@ -874,6 +965,56 @@ function drawHelpers() {
     ctx.restore();
 }
 
+// ==================== PRATINJAU DAN ANIMASI ====================
+
+function sameParams(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+}
+
+// Bayangan sementara dari parameter yang sedang diatur. Tidak digambar bila
+// hasil yang sudah diterapkan memakai parameter yang sama persis.
+function previewPoints() {
+    if (!points.length || animation) return null;
+    const params = getTransformParams(currentTransform);
+    if (currentTransform === 'dilation' && params.factor === 0) return null;
+    if (resultMeta && resultMeta.transform === currentTransform && sameParams(resultMeta.params, params)) return null;
+    return GeometryTransformations.apply(points, currentTransform, params);
+}
+
+function prefersReducedMotion() {
+    return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+function animationPoints() {
+    const progress = Math.min(1, (performance.now() - animation.start) / ANIMATION_MS);
+    return GeometryTransformations.interpolate(animation.from, animation.type, animation.params, easeInOutCubic(progress));
+}
+
+function startAnimation(type, params) {
+    stopAnimation();
+    if (prefersReducedMotion() || !points.length) return;
+    animation = { from: clonePoints(points), type, params, start: performance.now(), frame: 0 };
+    const step = (now) => {
+        if (!animation) return;
+        if (now - animation.start >= ANIMATION_MS) {
+            animation = null;
+            drawNow();
+            return;
+        }
+        drawNow();
+        animation.frame = requestAnimationFrame(step);
+    };
+    animation.frame = requestAnimationFrame(step);
+}
+
+function stopAnimation() {
+    if (!animation) return;
+    cancelAnimationFrame(animation.frame);
+    animation = null;
+}
+
 function drawNow() {
     if (redrawFrame) {
         cancelAnimationFrame(redrawFrame);
@@ -881,9 +1022,13 @@ function drawNow() {
     }
     drawGridAndAxes();
     drawHelpers();
+    const preview = previewPoints();
+    if (preview) drawShape(preview, COLORS.result, { preview: true });
     drawShape(points, COLORS.original);
-    drawShape(transformedPoints, COLORS.result);
-    drawPointLabels();
+    const resultPoints = animation ? animationPoints() : transformedPoints;
+    drawShape(resultPoints, COLORS.result);
+    drawHighlight(resultPoints);
+    drawPointLabels(animation ? [] : transformedPoints);
 }
 
 function redrawCanvas() {
@@ -941,14 +1086,7 @@ function syncParamDisplays() {
 }
 
 function computeTransform(type, params) {
-    const T = GeometryTransformations;
-    switch (type) {
-        case 'reflection': return T.reflect(points, params.axis, params);
-        case 'rotation': return T.rotate(points, params.angle, params.centerX, params.centerY);
-        case 'dilation': return T.dilate(points, params.factor, params.centerX, params.centerY);
-        case 'translation': return T.translate(points, params.tx, params.ty);
-        default: return [];
-    }
+    return GeometryTransformations.apply(points, type, params);
 }
 
 function applyTransform() {
@@ -965,10 +1103,15 @@ function applyTransform() {
     transformedPoints = computeTransform(currentTransform, params);
     const hasCenter = currentTransform === 'rotation' || currentTransform === 'dilation';
     const center = hasCenter ? { x: params.centerX, y: params.centerY } : null;
-    resultMeta = { transform: currentTransform, center };
+    resultMeta = { transform: currentTransform, center, params };
     saveHistory();
 
     ensureVisible(center ? [center] : []);
+    startAnimation(currentTransform, params);
+    if (smallScreen.matches) {
+        setSheetExpanded(false);
+        revealCanvas();
+    }
     redrawCanvas();
     updateCoordinateTable();
     showMessage(`Transformasi ${transformNames[currentTransform]} berhasil diterapkan!`, 'success');
@@ -1018,14 +1161,28 @@ const presets = {
     pentagon: [{ x: -3, y: 2 }, { x: 0, y: 5 }, { x: 3, y: 2 }, { x: 2, y: -1 }, { x: -2, y: -1 }]
 };
 
-function createSampleShape() {
-    setShape(presets.pentagon, true);
-    showMessage('Contoh bentuk segilima telah dibuat', 'success');
+const presetNames = { triangle: 'segitiga', square: 'persegi', pentagon: 'segilima' };
+
+function loadPreset(name) {
+    const key = presets[name] ? name : 'pentagon';
+    setShape(presets[key], true);
+    showMessage(`Contoh bentuk ${presetNames[key]} telah dibuat`, 'success');
 }
 
-function loadSelectedPreset() {
-    setShape(presets[shapePreset.value] || presets.pentagon, true);
-    showMessage('Preset bentuk berhasil dimuat', 'success');
+// ==================== BOTTOM SHEET (LAYAR KECIL) ====================
+
+function setSheetExpanded(expanded) {
+    controlPanel.classList.toggle('is-collapsed', !expanded);
+    sheetToggle.setAttribute('aria-expanded', String(expanded));
+    document.body.classList.toggle('sheet-open', expanded);
+}
+
+// Di layar kecil, pastikan kanvas terlihat agar animasi hasil tidak terlewat.
+function revealCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const sheetTop = smallScreen.matches ? controlPanel.getBoundingClientRect().top : window.innerHeight;
+    if (rect.top >= 0 && rect.bottom <= sheetTop) return;
+    canvas.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
 }
 
 function createCell(text, extraClass = '') {
@@ -1049,12 +1206,144 @@ function updateCoordinateTable() {
     }
     for (let i = 0; i < maxRows; i++) {
         const row = document.createElement('tr');
+        row.dataset.index = String(i);
+        if (i === hoveredIndex) row.classList.add('is-highlighted');
         row.appendChild(createCell(`P${i + 1}`, 'font-medium'));
         row.appendChild(createCell(format(points[i])));
         row.appendChild(createCell(format(transformedPoints[i])));
         fragment.appendChild(row);
     }
     coordinateTableBody.replaceChildren(fragment);
+    updateFormula();
+}
+
+// ==================== KARTU RUMUS ====================
+
+function updateFormula() {
+    const params = getTransformParams(currentTransform);
+    const general = generalRule(currentTransform, params);
+    formulaEls.title.textContent = transformNames[currentTransform];
+    formulaEls.general.textContent = general.rule;
+    formulaEls.note.textContent = general.note;
+
+    const invalid = currentTransform === 'dilation' && params.factor === 0;
+    formulaEls.specific.textContent = invalid
+        ? 'Faktor k tidak boleh 0'
+        : formatAffineRule(affineCoefficients(p => GeometryTransformations.apply([p], currentTransform, params)[0]));
+
+    const example = formulaEls.example;
+    example.replaceChildren();
+    if (!points.length || invalid) {
+        const empty = document.createElement('span');
+        empty.className = 'formula-example-empty';
+        empty.textContent = invalid ? '-' : 'Tambahkan titik untuk melihat contoh perhitungan.';
+        example.appendChild(empty);
+        return;
+    }
+    const image = GeometryTransformations.apply([points[0]], currentTransform, params)[0];
+    const format = (name, p) => `${name}(${formatCoordinate(p.x)}, ${formatCoordinate(p.y)})`;
+    const original = document.createElement('span');
+    original.className = 'formula-example-original';
+    original.textContent = format('P1', points[0]);
+    const result = document.createElement('span');
+    result.className = 'formula-example-result';
+    result.textContent = format("P'1", image);
+    example.append(original, ' → ', result);
+}
+
+// ==================== LATIHAN ====================
+
+const practice = { question: null, attempted: false, correct: 0, total: 0 };
+
+function renderPracticeQuestion() {
+    const { question } = practice;
+    const text = $('practiceQuestion');
+    text.replaceChildren();
+    // Sorot nama titik agar soal mudah dipindai.
+    const [before, after] = question.text.split(/A\([^)]*\)/);
+    const name = document.createElement('strong');
+    name.textContent = `A(${formatCoordinate(question.point.x)}, ${formatCoordinate(question.point.y)})`;
+    text.append(before, name, after);
+}
+
+function newPracticeQuestion() {
+    practice.question = createQuestion();
+    practice.attempted = false;
+    renderPracticeQuestion();
+    $('practiceAnswer').value = '';
+    setPracticeFeedback('', '');
+}
+
+function setPracticeFeedback(message, state) {
+    const feedback = $('practiceFeedback');
+    feedback.textContent = message;
+    feedback.classList.toggle('is-correct', state === 'correct');
+    feedback.classList.toggle('is-wrong', state === 'wrong');
+}
+
+function updatePracticeScore() {
+    $('practiceScore').textContent = `Benar ${practice.correct} dari ${practice.total}`;
+}
+
+function checkPracticeAnswer() {
+    const { question } = practice;
+    const result = checkAnswer(question, $('practiceAnswer').value);
+    if (!result.valid) {
+        setPracticeFeedback('Tulis jawaban sebagai koordinat, mis. (2, -3).', 'wrong');
+        return;
+    }
+    // Skor dihitung dari percobaan pertama setiap soal.
+    if (!practice.attempted) {
+        practice.attempted = true;
+        practice.total += 1;
+        if (result.correct) practice.correct += 1;
+        updatePracticeScore();
+    }
+    const answer = `A'(${formatCoordinate(question.answer.x)}, ${formatCoordinate(question.answer.y)})`;
+    if (result.correct) {
+        setPracticeFeedback(`Benar! Bayangannya ${answer}.`, 'correct');
+    } else {
+        const rule = generalRule(question.type, question.params);
+        setPracticeFeedback(`Belum tepat. Petunjuk: ${rule.rule}${rule.note ? ` dengan ${rule.note}` : ''}.`, 'wrong');
+    }
+}
+
+// Tampilkan soal di kanvas: titik A, tab dan parameter yang sesuai, lalu terapkan.
+function showPracticeOnCanvas() {
+    const { question } = practice;
+    const { params } = question;
+    const set = (id, value) => { $(id).value = String(value); };
+    if (question.type === 'reflection') {
+        set('reflectionAxis', params.axis);
+        set('reflectionK', params.k);
+    } else if (question.type === 'rotation') {
+        set('rotationAngle', params.angle);
+        set('rotationCenterX', params.centerX);
+        set('rotationCenterY', params.centerY);
+    } else if (question.type === 'dilation') {
+        set('scaleFactor', params.factor);
+        set('dilationCenterX', params.centerX);
+        set('dilationCenterY', params.centerY);
+    } else {
+        set('translationX', params.tx);
+        set('translationY', params.ty);
+    }
+    const tab = transformTabs.find(item => item.dataset.transform === question.type);
+    setActiveTab(tab);
+    handleParamChange();
+    setShape([question.point], false);
+    applyTransform();
+    revealCanvas();
+}
+
+function initPractice() {
+    $('practiceCheck').addEventListener('click', checkPracticeAnswer);
+    $('practiceAnswer').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') checkPracticeAnswer();
+    });
+    $('practiceNext').addEventListener('click', newPracticeQuestion);
+    $('practiceShow').addEventListener('click', showPracticeOnCanvas);
+    newPracticeQuestion();
 }
 
 // ==================== TOMBOL BERBAGI ====================
@@ -1089,10 +1378,15 @@ function initShareButtons() {
                 return;
             }
         }
+        const iconLink = copyButton.querySelector('.fa-link');
         const iconCheck = copyButton.querySelector('.fa-check');
-        if (iconCheck) {
+        if (iconLink && iconCheck) {
+            iconLink.classList.add('hidden');
             iconCheck.classList.remove('hidden');
-            setTimeout(() => iconCheck.classList.add('hidden'), 2000);
+            setTimeout(() => {
+                iconCheck.classList.add('hidden');
+                iconLink.classList.remove('hidden');
+            }, 2000);
         }
         showMessage('Tautan berhasil disalin!', 'success');
     });

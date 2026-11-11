@@ -16,3 +16,21 @@ test('tata letak mobile: tidak ada scroll horizontal dan teks petunjuk mobile ta
     expect(overflow).toBeLessThanOrEqual(0);
     await expect(page.getByText('Ketuk: tambah titik | Seret: geser | Pinch: zoom')).toBeVisible();
 });
+
+test('panel kontrol menjadi bottom sheet yang bisa dibuka dan ditutup', async ({ page }) => {
+    const toggle = page.locator('#sheetToggle');
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#applyTransform')).toBeInViewport();
+    await expect(page.locator('#reflectionAxis')).toBeHidden();
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#reflectionAxis')).toBeVisible();
+
+    // Terapkan menutup sheet agar animasi di kanvas terlihat.
+    await page.locator('#sampleShape').click();
+    await page.locator('#applyTransform').click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect((await readTable(page))[0][2]).toBe('(-3, -2)');
+});

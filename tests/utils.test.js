@@ -159,3 +159,67 @@ test('placeLabels menghindari keluar kanvas', () => {
     const [pos] = placeLabels([{ x: 590, y: 5, width: 80, height: 19 }], { bounds: { x: 0, y: 0, width: 600, height: 400 } });
     assert.ok(pos.x >= 0 && pos.x + 80 <= 600 && pos.y >= 0, JSON.stringify(pos));
 });
+
+test('formatLinear menulis ekspresi yang rapi', () => {
+    const { formatLinear } = require('../utils.js');
+    assert.equal(formatLinear(1, 0, 0), 'x');
+    assert.equal(formatLinear(0, -1, 0), '-y');
+    assert.equal(formatLinear(-1, 2, -3), '-x + 2y - 3');
+    assert.equal(formatLinear(0, 0, 0), '0');
+    assert.equal(formatLinear(0.5, 0, 4), '0.5x + 4');
+});
+
+test('formatAffineRule dari transformasi nyata', () => {
+    const { affineCoefficients, formatAffineRule } = require('../utils.js');
+    const { apply } = require('../transformations.js');
+    const rule = (type, params) => formatAffineRule(affineCoefficients(p => apply([p], type, params)[0]));
+    assert.equal(rule('reflection', { axis: 'x' }), '(x, y) → (x, -y)');
+    assert.equal(rule('reflection', { axis: 'x=h', k: 2 }), '(x, y) → (-x + 4, y)');
+    assert.equal(rule('rotation', { angle: 90, centerX: 0, centerY: 0 }), '(x, y) → (-y, x)');
+    assert.equal(rule('rotation', { angle: 30, centerX: 0, centerY: 0 }), '(x, y) → ≈ (0.87x - 0.5y, 0.5x + 0.87y)');
+    assert.equal(rule('dilation', { factor: 2, centerX: 1, centerY: 0 }), '(x, y) → (2x - 1, 2y)');
+    assert.equal(rule('translation', { tx: 4, ty: -3 }), '(x, y) → (x + 4, y - 3)');
+});
+
+test('generalRule memberi rumus umum dan nilai simbolnya', () => {
+    const { generalRule } = require('../utils.js');
+    assert.equal(generalRule('reflection', { axis: 'y=x' }).rule, '(x, y) → (y, x)');
+    assert.equal(generalRule('reflection', { axis: 'y=k', k: -1 }).note, 'k = -1');
+    assert.equal(generalRule('rotation', { angle: 90, centerX: 0, centerY: 0 }).note, 'θ = 90°');
+    assert.match(generalRule('rotation', { angle: 90, centerX: 1, centerY: 2 }).note, /pusat \(a, b\) = \(1, 2\)/);
+    assert.equal(generalRule('dilation', { factor: 3, centerX: 0, centerY: 0 }).rule, '(x, y) → (kx, ky)');
+    assert.equal(generalRule('translation', { tx: 4, ty: 3 }).note, 'vektor (a, b) = (4, 3)');
+});
+
+test('createQuestion: soal valid dan jawabannya sesuai transformasi', () => {
+    const { createQuestion } = require('../utils.js');
+    const { apply } = require('../transformations.js');
+    // Generator semu-acak deterministik agar tes stabil.
+    let seed = 7;
+    const random = () => {
+        seed = (seed * 16807) % 2147483647;
+        return (seed - 1) / 2147483646;
+    };
+    const types = new Set();
+    for (let i = 0; i < 300; i++) {
+        const q = createQuestion(random);
+        types.add(q.type);
+        assert.ok(!(q.point.x === 0 && q.point.y === 0), 'titik asal tidak dipakai');
+        const [expected] = apply([q.point], q.type, q.params);
+        assert.ok(Math.abs(expected.x - q.answer.x) < 0.006 && Math.abs(expected.y - q.answer.y) < 0.006);
+        assert.ok(Number.isInteger(q.answer.x * 2) && Number.isInteger(q.answer.y * 2), 'jawaban bulat atau setengah');
+        assert.match(q.text, /^Tentukan bayangan titik A\(-?\d+, -?\d+\) oleh [a-z]/);
+        if (q.type === 'dilation') assert.notEqual(q.params.factor, 0);
+        if (q.type === 'translation') assert.notEqual(q.params.tx, 0);
+    }
+    assert.equal(types.size, 4, 'keempat jenis transformasi muncul');
+});
+
+test('checkAnswer menerima format bebas dan menolak teks tidak valid', () => {
+    const { checkAnswer } = require('../utils.js');
+    const q = { answer: { x: 2, y: -3.5 } };
+    assert.deepEqual(checkAnswer(q, "A'(2, -3.5)"), { valid: true, correct: true });
+    assert.deepEqual(checkAnswer(q, '(2; -3,5)'), { valid: true, correct: true });
+    assert.deepEqual(checkAnswer(q, '(2, 3.5)'), { valid: true, correct: false });
+    assert.deepEqual(checkAnswer(q, 'dua'), { valid: false, correct: false });
+});

@@ -40,7 +40,40 @@
         return points.map(({ x, y }) => ({ x: x + tx, y: y + ty }));
     }
 
-    const api = { reflect, rotate, dilate, translate };
+    /** Terapkan transformasi berdasarkan jenis dan parameter dari panel kontrol. */
+    function apply(points, type, params = {}) {
+        switch (type) {
+            case 'reflection': return reflect(points, params.axis, params);
+            case 'rotation': return rotate(points, params.angle, params.centerX, params.centerY);
+            case 'dilation': return dilate(points, params.factor, params.centerX, params.centerY);
+            case 'translation': return translate(points, params.tx, params.ty);
+            default: return [];
+        }
+    }
+
+    /**
+     * Posisi antara untuk animasi, t dari 0 (bentuk asli) sampai 1 (bayangan).
+     * Rotasi berputar mengelilingi pusat, dilatasi mengubah faktor dari 1 ke k,
+     * translasi bergeser sepanjang vektor, dan refleksi "melipat" setiap titik
+     * tegak lurus melewati garis cermin.
+     */
+    function interpolate(points, type, params = {}, t = 1) {
+        switch (type) {
+            case 'rotation': return rotate(points, params.angle * t, params.centerX, params.centerY);
+            case 'dilation': return dilate(points, 1 + (params.factor - 1) * t, params.centerX, params.centerY);
+            case 'translation': return translate(points, params.tx * t, params.ty * t);
+            case 'reflection': {
+                const images = reflect(points, params.axis, params);
+                return points.map((p, i) => ({
+                    x: p.x + (images[i].x - p.x) * t,
+                    y: p.y + (images[i].y - p.y) * t
+                }));
+            }
+            default: return [];
+        }
+    }
+
+    const api = { reflect, rotate, dilate, translate, apply, interpolate };
     global.GeometryTransformations = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 }(typeof window !== 'undefined' ? window : globalThis));

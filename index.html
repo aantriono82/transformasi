@@ -104,17 +104,17 @@
 
 <body class="app-shell bg-gradient-to-br from-primary-900 via-primary-800 to-primary-950 text-gray-100 min-h-screen font-sans">
     <div class="container mx-auto px-3 xs:px-4 sm:px-6 py-4 sm:py-6 max-w-7xl">
-        <!-- Header - Responsive -->
-        <header class="text-center mb-6 sm:mb-8 md:mb-10 p-4 sm:p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-primary-800 shadow-xl border border-primary-400/30">
-            <h1 class="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 text-white flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-                <i class="fas fa-shapes text-secondary-500 text-3xl sm:text-4xl"></i> 
-                <span>Aplikasi Geometri Transformasi</span>
-            </h1>
-            <p class="text-base sm:text-lg md:text-xl text-blue-100 mb-2">Visualisasi interaktif untuk memahami transformasi geometri</p>
-            <p class="text-sm sm:text-base md:text-lg text-yellow-200 flex items-center justify-center gap-2">
-                <i class="fas fa-lightbulb" aria-hidden="true"></i>
-                <span>Mulai dari contoh bentuk, lalu eksplorasi transformasinya</span>
-            </p>
+        <!-- Header ringkas -->
+        <header class="app-header mb-4 sm:mb-5 rounded-xl md:rounded-2xl border">
+            <div class="app-header-logo" aria-hidden="true"><i class="fas fa-shapes"></i></div>
+            <div class="min-w-0 flex-1">
+                <h1 class="app-header-title">Aplikasi Geometri Transformasi</h1>
+                <p class="app-header-subtitle">Visualisasi interaktif refleksi, rotasi, dilatasi, dan translasi</p>
+            </div>
+            <button id="helpBtn" type="button" class="app-header-help" aria-label="Petunjuk penggunaan">
+                <i class="fas fa-question-circle" aria-hidden="true"></i>
+                <span class="hidden sm:inline">Petunjuk</span>
+            </button>
         </header>
         
         <!-- Tab Jenis Transformasi -->
@@ -149,95 +149,74 @@
                 <!-- Canvas Container with Responsive Height -->
                 <div class="canvas-shell bg-white rounded-lg md:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-inner">
                     <div class="canvas-status" aria-live="polite">Refleksi terhadap sumbu X</div>
-                    <canvas id="transformCanvas" class="w-full h-48 xs:h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96 rounded" aria-label="Bidang koordinat interaktif untuk melihat transformasi geometri" aria-describedby="canvasHint" tabindex="0"></canvas>
+                    <label class="canvas-toggle" title="Tampilkan koordinat lengkap pada semua label titik">
+                        <input type="checkbox" id="showCoordinates">
+                        <span>Koordinat</span>
+                    </label>
+                    <canvas id="transformCanvas" class="canvas-main w-full rounded" aria-label="Bidang koordinat interaktif untuk melihat transformasi geometri" aria-describedby="canvasHint" tabindex="0"></canvas>
                     <p id="canvasHint" class="sr-only">Klik atau ketuk untuk menambah titik. Saat kanvas difokuskan, gunakan tombol panah untuk menggeser, plus atau minus untuk zoom, dan 0 untuk reset tampilan. Koordinat lengkap tersedia di tabel di bawah.</p>
-                </div>
-                
-                <!-- Canvas Controls - Responsive -->
-                <div class="flex flex-col xs:flex-row flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-6">
-                    <button id="resetView" class="flex-1 xs:flex-none px-3 py-2.5 sm:px-4 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg sm:rounded-xl font-medium flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
-                        <i class="fas fa-crosshairs mr-2 text-xs sm:text-sm"></i> 
-                        <span class="truncate">Reset Tampilan</span>
-                    </button>
-                    <button id="zoomIn" class="flex-1 xs:flex-none px-3 py-2.5 sm:px-4 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg sm:rounded-xl font-medium flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
-                        <i class="fas fa-search-plus mr-2 text-xs sm:text-sm"></i> 
-                        <span class="truncate">Perbesar</span>
-                    </button>
-                    <button id="zoomOut" class="flex-1 xs:flex-none px-3 py-2.5 sm:px-4 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg sm:rounded-xl font-medium flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
-                        <i class="fas fa-search-minus mr-2 text-xs sm:text-sm"></i> 
-                        <span class="truncate">Perkecil</span>
-                    </button>
-                    <div class="w-full xs:w-auto xs:flex-1 flex items-center text-xs xs:text-sm text-blue-200 mt-2 xs:mt-0 px-2">
-                        <i class="fas fa-info-circle text-secondary-500 mr-2 text-xs sm:text-sm"></i>
-                        <span class="truncate hidden xs:inline">Klik: tambah titik | Seret: geser | Scroll: zoom</span>
-                        <span class="truncate xs:hidden">Ketuk: tambah titik | Seret: geser | Pinch: zoom</span>
+                    <div class="canvas-tools" role="group" aria-label="Kontrol tampilan kanvas">
+                        <button id="zoomIn" type="button" class="canvas-tool" title="Perbesar" aria-label="Perbesar"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                        <button id="zoomOut" type="button" class="canvas-tool" title="Perkecil" aria-label="Perkecil"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                        <button id="resetView" type="button" class="canvas-tool" title="Reset tampilan" aria-label="Reset tampilan"><i class="fas fa-crosshairs" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="canvas-legend" aria-hidden="true">
+                        <span><i class="legend-swatch legend-original"></i>Asli</span>
+                        <span><i class="legend-swatch legend-result"></i>Hasil</span>
+                        <span><i class="legend-swatch legend-preview"></i>Pratinjau</span>
                     </div>
                 </div>
-                
-                <!-- Manual Point Input - Responsive -->
-                <div class="bg-primary-700/50 rounded-xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 border border-primary-400/20">
-                    <h3 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white flex items-center">
-                        <i class="fas fa-keyboard text-secondary-500 mr-2 sm:mr-3"></i> Input Titik Manual
-                    </h3>
-                    
-                    <div class="flex flex-col sm:flex-row gap-3 mb-4">
-                        <div class="flex-1">
-                            <label for="manualPointInput" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Masukkan titik (x, y):</label>
-                            <input type="text" id="manualPointInput" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-primary-800 border-2 border-primary-500 rounded-lg sm:rounded-xl text-white placeholder-blue-300 focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base" 
-                                   placeholder="Contoh: (3, 5)">
-                        </div>
-                        <div class="flex items-end">
-                            <button id="addManualPoint" class="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-600 hover:to-secondary-700 text-white font-bold rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-300 hover:shadow-md text-sm sm:text-base">
-                                <i class="fas fa-plus-circle mr-2"></i> 
-                                <span class="whitespace-nowrap">Tambah Titik</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="text-xs sm:text-sm text-blue-200">
-                        <p class="font-medium mb-1">Format yang diterima:</p>
-                        <div class="flex flex-wrap gap-1 sm:gap-2">
-                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">(3, 5)</span>
-                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">2, -4</span>
-                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">A(1,2)</span>
-                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">x=3 y=5</span>
-                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">(1,5; -2)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="preset-panel bg-primary-900/50 rounded-xl p-4 sm:p-5 mb-4 sm:mb-6 border border-primary-400/20">
-                    <div class="flex flex-col sm:flex-row sm:items-end gap-3">
-                        <div class="flex-1">
-                            <label for="shapePreset" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Preset bentuk</label>
-                            <select id="shapePreset" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-primary-800 border border-primary-600 rounded-lg sm:rounded-xl text-white text-sm sm:text-base">
-                                <option value="triangle">Segitiga</option>
-                                <option value="square">Persegi</option>
-                                <option value="pentagon" selected>Segilima</option>
-                            </select>
-                        </div>
-                        <button id="loadPreset" type="button" class="px-4 py-2.5 sm:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg sm:rounded-xl">Muat Bentuk</button>
-                    </div>
-                </div>
-                
-                <!-- Legend - Responsive -->
-                <div class="flex flex-col xs:flex-row justify-center gap-3 xs:gap-4 sm:gap-6 md:gap-8 mb-4 sm:mb-6 flex-wrap">
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-blue-500 rounded mr-2 sm:mr-3 shadow"></div>
-                        <span class="text-white font-medium text-sm sm:text-base">Bentuk Asli</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-secondary-500 rounded mr-2 sm:mr-3 shadow"></div>
-                        <span class="text-white font-medium text-sm sm:text-base">Hasil Transformasi</span>
-                    </div>
-                </div>
-                
-                <!-- Instructions - Responsive -->
-                <p class="text-blue-200 text-center mb-6 text-xs sm:text-sm md:text-base leading-relaxed px-2">
-                    Klik kanvas atau gunakan input manual untuk menambahkan titik. Tekan "Tutup Poligon" untuk menyelesaikan bentuk.
-                    <span class="hidden sm:inline">Seret kanvas untuk menggeser dan scroll untuk zoom.</span>
+                <p class="canvas-hint">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    <span class="hidden xs:inline">Klik: tambah titik | Seret: geser | Scroll: zoom</span>
+                    <span class="xs:hidden">Ketuk: tambah titik | Seret: geser | Pinch: zoom</span>
                 </p>
+
+                <!-- Rumus transformasi aktif -->
+                <section id="formulaCard" class="formula-card mb-4 sm:mb-6" aria-labelledby="formulaHeading">
+                    <h3 id="formulaHeading" class="formula-heading">
+                        <i class="fas fa-square-root-alt" aria-hidden="true"></i>
+                        <span>Rumus <span id="formulaTitle">refleksi</span></span>
+                    </h3>
+                    <dl class="formula-list">
+                        <div class="formula-row">
+                            <dt>Umum</dt>
+                            <dd><code id="formulaGeneral"></code><span id="formulaNote" class="formula-note"></span></dd>
+                        </div>
+                        <div class="formula-row">
+                            <dt>Dengan nilai ini</dt>
+                            <dd><code id="formulaSpecific"></code></dd>
+                        </div>
+                        <div class="formula-row">
+                            <dt>Contoh</dt>
+                            <dd id="formulaExample"></dd>
+                        </div>
+                    </dl>
+                </section>
                 
+                <!-- Buat bentuk: preset cepat + input manual -->
+                <section class="shape-card mb-4 sm:mb-6" aria-labelledby="shapeCardTitle">
+                    <h3 id="shapeCardTitle" class="card-title">
+                        <i class="fas fa-draw-polygon" aria-hidden="true"></i> Buat Bentuk
+                    </h3>
+                    <div class="shape-presets" role="group" aria-label="Bentuk cepat">
+                        <button type="button" class="shape-chip" data-preset="triangle"><span class="shape-chip-icon" aria-hidden="true">△</span>Segitiga</button>
+                        <button type="button" class="shape-chip" data-preset="square"><span class="shape-chip-icon" aria-hidden="true">□</span>Persegi</button>
+                        <button type="button" id="sampleShape" class="shape-chip" data-preset="pentagon"><span class="shape-chip-icon" aria-hidden="true">⬠</span>Segilima</button>
+                    </div>
+                    <label for="manualPointInput" class="block text-blue-100 font-medium mt-4 mb-1 sm:mb-2 text-sm">Atau tambah titik (x, y):</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="manualPointInput" class="field flex-1 min-w-0" placeholder="Contoh: (3, 5)">
+                        <button id="addManualPoint" type="button" class="btn-accent whitespace-nowrap">
+                            <i class="fas fa-plus" aria-hidden="true"></i><span class="hidden xs:inline">Tambah</span>
+                        </button>
+                    </div>
+                    <p class="text-xs text-blue-200 mt-2">
+                        Format: <code>(3, 5)</code> <code>2, -4</code> <code>A(1,2)</code> <code>x=3 y=5</code> <code>(1,5; -2)</code>.
+                        Klik kanvas untuk menambah titik, lalu "Tutup Poligon".
+                    </p>
+                </section>
+
                 <!-- Coordinate Table - Responsive with Scroll -->
                 <div>
                     <h3 class="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-white flex items-center">
@@ -246,7 +225,7 @@
                     
                     <div class="bg-primary-800/40 rounded-lg md:rounded-xl p-3 sm:p-4 border border-primary-500/30">
                         <div class="overflow-x-auto -mx-2 sm:mx-0">
-                            <div class="min-w-[500px] sm:min-w-0">
+                            <div class="min-w-[300px]">
                                 <table id="coordinateTable" class="w-full text-white text-sm sm:text-base">
                                     <thead class="bg-primary-700">
                                         <tr>
@@ -267,16 +246,45 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Latihan -->
+                <section id="practiceCard" class="practice-card mt-6" aria-labelledby="practiceTitle">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h3 id="practiceTitle" class="card-title mb-0">
+                            <i class="fas fa-graduation-cap" aria-hidden="true"></i> Latihan
+                        </h3>
+                        <span id="practiceScore" class="practice-score">Benar 0 dari 0</span>
+                    </div>
+                    <p id="practiceQuestion" class="practice-question"></p>
+                    <div class="flex gap-2 mt-3">
+                        <label for="practiceAnswer" class="sr-only">Jawaban koordinat bayangan</label>
+                        <input type="text" id="practiceAnswer" class="field flex-1 min-w-0" placeholder="Jawaban, mis. (2, -3)" autocomplete="off">
+                        <button id="practiceCheck" type="button" class="btn-accent whitespace-nowrap">Periksa</button>
+                    </div>
+                    <p id="practiceFeedback" class="practice-feedback" aria-live="polite"></p>
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        <button id="practiceNext" type="button" class="btn-ghost"><i class="fas fa-random" aria-hidden="true"></i> Soal baru</button>
+                        <button id="practiceShow" type="button" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Lihat di kanvas</button>
+                    </div>
+                </section>
             </section>
             
             <!-- Controls Section - Responsive -->
-            <section class="control-panel lg:w-1/3 bg-primary-800/70 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border border-primary-400/20" aria-labelledby="control-title">
-                <h2 id="control-title" class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white flex items-center">
-                    <i class="fas fa-sliders-h text-secondary-500 mr-2 sm:mr-3 text-lg sm:text-xl"></i> Kontrol Transformasi
+            <section id="controlPanel" class="control-panel is-collapsed lg:w-1/3 rounded-xl md:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl border" aria-labelledby="control-title">
+                <!-- Pegangan bottom sheet (hanya di layar kecil) -->
+                <button id="sheetToggle" type="button" class="sheet-toggle" aria-expanded="false" aria-controls="sheetParams sheetActions">
+                    <span class="sheet-grip" aria-hidden="true"></span>
+                    <span class="sheet-toggle-row">
+                        <span class="sheet-toggle-title"><i class="fas fa-sliders-h" aria-hidden="true"></i> <span id="sheetTitle">Atur refleksi</span></span>
+                        <i class="fas fa-chevron-up sheet-chevron" aria-hidden="true"></i>
+                    </span>
+                </button>
+                <h2 id="control-title" class="control-title">
+                    <i class="fas fa-sliders-h" aria-hidden="true"></i> Kontrol Transformasi
                 </h2>
                 
                 <!-- Parameters Container - Responsive -->
-                <div class="bg-primary-900/60 rounded-xl p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 border border-primary-500/30">
+                <div id="sheetParams" class="sheet-collapsible bg-primary-900/60 rounded-xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 border border-primary-500/30">
                     <!-- Reflection Parameters -->
                     <div id="reflection-params" role="tabpanel" aria-labelledby="tab-reflection" tabindex="0" class="transform-params space-y-4 sm:space-y-6">
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Refleksi (Pencerminan)</h3>
@@ -392,52 +400,36 @@
                     </div>
                 </div>
                 
-                <!-- Apply Transform Button - Responsive -->
-                <button id="applyTransform" class="w-full bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-600 hover:to-secondary-700 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-lg mb-4 sm:mb-6 text-base sm:text-lg">
-                    <i class="fas fa-play-circle mr-2 sm:mr-3"></i> 
+                <!-- Tombol utama -->
+                <button id="applyTransform" type="button" class="btn-primary w-full">
+                    <i class="fas fa-play-circle" aria-hidden="true"></i>
                     <span class="whitespace-nowrap">Terapkan Transformasi</span>
                 </button>
-                
-                <!-- Action Buttons - Responsive Grid -->
-                <div class="space-y-3 sm:space-y-4">
-                    <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                        <button id="clearPoints" class="action-btn bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
-                            <i class="fas fa-eraser mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
-                            <span class="truncate">Hapus Titik</span>
-                        </button>
-                        <button id="closePolygon" class="action-btn bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
-                            <i class="fas fa-draw-polygon mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
-                            <span class="truncate">Tutup Poligon</span>
-                        </button>
-                    </div>
 
-                    <div class="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                        <button id="undoAction" type="button" class="action-btn bg-slate-600 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm" disabled>
-                            <i class="fas fa-undo mr-1 sm:mr-2"></i><span>Undo</span>
+                <!-- Aksi sekunder -->
+                <div id="sheetActions" class="sheet-collapsible action-groups">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="undoAction" type="button" class="btn-ghost" disabled>
+                            <i class="fas fa-undo" aria-hidden="true"></i><span>Undo</span>
                         </button>
-                        <button id="redoAction" type="button" class="action-btn bg-slate-600 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm" disabled>
-                            <i class="fas fa-redo mr-1 sm:mr-2"></i><span>Redo</span>
+                        <button id="redoAction" type="button" class="btn-ghost" disabled>
+                            <i class="fas fa-redo" aria-hidden="true"></i><span>Redo</span>
                         </button>
-                        <button id="exportCanvas" type="button" class="action-btn bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-2.5 px-3 rounded-lg sm:rounded-xl flex items-center justify-center text-xs sm:text-sm">
-                            <i class="fas fa-download mr-1 sm:mr-2"></i><span>Ekspor</span>
+                        <button id="closePolygon" type="button" class="btn-ghost">
+                            <i class="fas fa-draw-polygon" aria-hidden="true"></i><span>Tutup Poligon</span>
                         </button>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                        <button id="resetTransform" class="action-btn reset bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
-                            <i class="fas fa-undo mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
-                            <span class="truncate">Reset</span>
-                        </button>
-                        <button id="sampleShape" class="action-btn bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-md flex items-center justify-center text-xs sm:text-sm">
-                            <i class="fas fa-star mr-1 sm:mr-2 text-xs sm:text-sm"></i> 
-                            <span class="truncate">Contoh Bentuk</span>
+                        <button id="exportCanvas" type="button" class="btn-ghost">
+                            <i class="fas fa-download" aria-hidden="true"></i><span>Ekspor PNG</span>
                         </button>
                     </div>
-                    
-                    <button id="helpBtn" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl transition-all duration-300 hover:shadow-lg flex items-center justify-center text-base sm:text-lg">
-                        <i class="fas fa-question-circle mr-2 sm:mr-3"></i> 
-                        <span class="whitespace-nowrap">Petunjuk Penggunaan</span>
-                    </button>
+                    <div class="danger-zone grid grid-cols-2 gap-2">
+                        <button id="resetTransform" type="button" class="btn-danger">
+                            <i class="fas fa-rotate-left" aria-hidden="true"></i><span>Reset Hasil</span>
+                        </button>
+                        <button id="clearPoints" type="button" class="btn-danger">
+                            <i class="fas fa-eraser" aria-hidden="true"></i><span>Hapus Semua</span>
+                        </button>
+                    </div>
                 </div>
             </section>
         </div>
@@ -451,47 +443,32 @@
   
   <div class="flex items-center justify-center gap-2 text-blue-50 mb-6">
     <span class="text-sm">Dibuat dengan</span>
-    <span class="footer-heart" aria-hidden="true">♥</span>
-    <i class="fas fa-heart sr-only" aria-hidden="true"></i>
+    <i class="fas fa-heart footer-heart" aria-hidden="true"></i>
     <span class="text-sm">oleh Aan Triono</span>
   </div>
   
-  <!-- Share Buttons - New Addition -->
+  <!-- Tombol berbagi -->
   <div class="flex flex-wrap justify-center items-center gap-3 sm:gap-4 mb-4">
-    <!-- WhatsApp -->
-    <a href="#" id="share-whatsapp" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-green-400/50 backdrop-blur-sm" 
+    <a href="#" id="share-whatsapp" class="share-btn w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 bg-green-500 hover:bg-green-600 border-green-400/50"
        title="Bagikan ke WhatsApp" aria-label="Bagikan ke WhatsApp">
-      <span class="share-glyph" aria-hidden="true">☏</span>
-      <i class="fab fa-whatsapp sr-only" aria-hidden="true"></i>
+      <i class="fab fa-whatsapp share-icon" aria-hidden="true"></i>
     </a>
-    
-    <!-- Facebook -->
-    <a href="#" id="share-facebook" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-blue-500/50 backdrop-blur-sm" 
+    <a href="#" id="share-facebook" class="share-btn w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 bg-blue-600 hover:bg-blue-700 border-blue-500/50"
        title="Bagikan ke Facebook" aria-label="Bagikan ke Facebook">
-      <span class="share-glyph share-glyph-letter" aria-hidden="true">f</span>
-      <i class="fab fa-facebook-f sr-only" aria-hidden="true"></i>
+      <i class="fab fa-facebook-f share-icon" aria-hidden="true"></i>
     </a>
-    
-    <!-- Twitter/X -->
-    <a href="#" id="share-twitter" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-red-500 hover:bg-sky-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-sky-400/50 backdrop-blur-sm" 
-       title="Bagikan ke Twitter" aria-label="Bagikan ke Twitter">
-      <span class="share-glyph" aria-hidden="true">𝕏</span>
-      <i class="fab fa-twitter sr-only" aria-hidden="true"></i>
+    <a href="#" id="share-twitter" class="share-btn w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 bg-slate-900 hover:bg-black border-slate-500/50"
+       title="Bagikan ke X" aria-label="Bagikan ke X">
+      <i class="fab fa-x-twitter share-icon" aria-hidden="true"></i>
     </a>
-    
-    <!-- Telegram -->
-    <a href="#" id="share-telegram" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-blue-400 hover:bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-blue-400/50 backdrop-blur-sm" 
+    <a href="#" id="share-telegram" class="share-btn w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 bg-sky-500 hover:bg-sky-600 border-sky-400/50"
        title="Bagikan ke Telegram" aria-label="Bagikan ke Telegram">
-      <span class="share-glyph" aria-hidden="true">➤</span>
-      <i class="fab fa-telegram-plane sr-only" aria-hidden="true"></i>
+      <i class="fab fa-telegram share-icon" aria-hidden="true"></i>
     </a>
-    
-    <!-- Copy Link -->
-    <button id="share-copy" class="share-btn group w-12 h-12 sm:w-12 sm:h-12 bg-purple-600 hover:bg-gray-700 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 border-gray-500/50 backdrop-blur-sm" 
+    <button type="button" id="share-copy" class="share-btn w-12 h-12 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 border-2 bg-purple-600 hover:bg-purple-700 border-purple-400/50"
             title="Salin Tautan" aria-label="Salin Tautan">
-      <span class="share-glyph" aria-hidden="true">↗</span>
-      <i class="fas fa-link sr-only" aria-hidden="true"></i>
-      <i class="fas fa-check hidden text-green-400 text-sm absolute inset-0 m-auto group-hover:hidden"></i>
+      <i class="fas fa-link share-icon" aria-hidden="true"></i>
+      <i class="fas fa-check share-icon hidden" aria-hidden="true"></i>
     </button>
   </div>
   
@@ -524,7 +501,7 @@
                 <p class="text-xs uppercase tracking-wider text-blue-200 font-bold mb-2">Mulai cepat</p>
                 <p class="text-base sm:text-lg font-bold mb-2">Buat bentuk, pilih transformasi, lalu lihat hasilnya.</p>
                 <ol class="grid gap-2 sm:grid-cols-3 text-sm text-blue-100 list-decimal pl-5">
-                    <li>Gunakan preset atau tambahkan titik manual.</li>
+                    <li>Pilih bentuk cepat atau tambahkan titik manual.</li>
                     <li>Pilih refleksi, rotasi, dilatasi, atau translasi.</li>
                     <li>Tekan “Terapkan Transformasi”.</li>
                 </ol>
@@ -658,7 +635,7 @@
                 <ul class="space-y-2 text-gray-800 text-sm sm:text-base">
                     <li class="flex items-start">
                         <i class="fas fa-star text-yellow-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span>Gunakan tombol "Contoh Bentuk" untuk mulai dengan poligon segilima</span>
+                        <span>Gunakan tombol Segitiga, Persegi, atau Segilima di kartu "Buat Bentuk" untuk mulai dengan cepat</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-table text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
@@ -666,7 +643,11 @@
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-crosshairs text-green-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span>Gunakan "Reset Tampilan" untuk mengembalikan zoom dan pan ke posisi awal</span>
+                        <span>Tombol +, −, dan ⌖ di pojok kanan bawah kanvas mengatur zoom dan mengembalikan tampilan awal</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-graduation-cap text-orange-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span>Kartu "Latihan" memberi soal acak; jawab koordinat bayangannya, lalu tekan "Lihat di kanvas" untuk memeriksa secara visual</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-calculator text-purple-500 mt-1 mr-2 text-xs sm:text-sm"></i>
@@ -689,8 +670,7 @@
 
 <!-- Back to Top Button - Lingkaran Style -->
 <button id="backToTop" class="back-to-top-btn group" title="Kembali ke atas" aria-label="Kembali ke atas">
-  <span class="back-to-top-glyph" aria-hidden="true">↑</span>
-  <i class="fas fa-arrow-up sr-only" aria-hidden="true"></i>
+  <i class="fas fa-arrow-up" aria-hidden="true"></i>
 </button>
 
     <!-- JavaScript -->

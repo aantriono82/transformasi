@@ -221,6 +221,9 @@ test('label titik yang berdekatan tidak bertumpuk', async ({ page }) => {
     await setRange(page, '#reflectionM', 0.5);
     await setRange(page, '#reflectionC', 1);
     await page.locator('#applyTransform').click();
+    // Label lengkap (paling lebar) dipakai untuk semua titik.
+    await page.locator('#showCoordinates').check();
+    await page.waitForFunction(() => animation === null);
 
     // Rekam posisi label yang benar-benar digambar ke kanvas.
     const boxes = await page.evaluate(() => new Promise(resolve => {
@@ -243,4 +246,74 @@ test('label titik yang berdekatan tidak bertumpuk', async ({ page }) => {
             expect(overlap(boxes[i], boxes[j]), `${boxes[i].text} vs ${boxes[j].text}`).toBe(false);
         }
     }
+});
+
+test('kartu rumus mengikuti tab, parameter, dan titik pertama', async ({ page }) => {
+    await expect(page.locator('#formulaGeneral')).toHaveText('(x, y) → (x, -y)');
+    await expect(page.locator('#formulaExample')).toContainText('Tambahkan titik');
+
+    await page.locator('#tab-translation').click();
+    await expect(page.locator('#formulaTitle')).toHaveText('translasi');
+    await expect(page.locator('#formulaSpecific')).toHaveText('(x, y) → (x + 4, y + 3)');
+    await page.locator('#sampleShape').click();
+    await expect(page.locator('#formulaExample')).toHaveText("P1(-3, 2) → P'1(1, 5)");
+
+    await page.locator('#tab-rotation').click();
+    await page.locator('#rotationAngle').evaluate((input) => {
+        input.value = '90';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await expect(page.locator('#formulaSpecific')).toHaveText('(x, y) → (-y, x)');
+});
+
+test('label titik ringkas secara default, lengkap saat disorot', async ({ page }) => {
+    await page.locator('#sampleShape').click();
+    const labels = () => page.evaluate(() => {
+        const recorded = [];
+        const originalFillText = ctx.fillText;
+        ctx.fillText = function (text, ...rest) {
+            if (/^P'?\d+/.test(text)) recorded.push(text);
+            return originalFillText.call(this, text, ...rest);
+        };
+        drawNow();
+        ctx.fillText = originalFillText;
+        return recorded;
+    });
+    expect(await labels()).toEqual(['P1', 'P2', 'P3', 'P4', 'P5']);
+
+    await page.locator('#coordinateTableBody tr').nth(1).hover();
+    await expect(page.locator('#coordinateTableBody tr').nth(1)).toHaveClass(/is-highlighted/);
+    expect(await labels()).toContain('P2(0, 5)');
+});
+
+test('bentuk cepat memuat segitiga dan persegi', async ({ page }) => {
+    await page.locator('.shape-chip[data-preset="triangle"]').click();
+    expect(await readTable(page)).toHaveLength(3);
+    await expect(page.locator('#srAnnouncer')).toHaveText('Contoh bentuk segitiga telah dibuat');
+    await page.locator('.shape-chip[data-preset="square"]').click();
+    expect(await readTable(page)).toHaveLength(4);
+});
+
+test('latihan: jawaban benar menambah skor, lihat di kanvas memuat soal', async ({ page }) => {
+    await expect(page.locator('#practiceQuestion')).toContainText('Tentukan bayangan titik A(');
+    const answer = await page.evaluate(() => practice.question.answer);
+    await page.locator('#practiceAnswer').fill('salah');
+    await page.locator('#practiceCheck').click();
+    await expect(page.locator('#practiceFeedback')).toContainText('Tulis jawaban sebagai koordinat');
+    await expect(page.locator('#practiceScore')).toHaveText('Benar 0 dari 0');
+
+    await page.locator('#practiceAnswer').fill(`(${answer.x}, ${answer.y})`);
+    await page.locator('#practiceAnswer').press('Enter');
+    await expect(page.locator('#practiceFeedback')).toContainText('Benar!');
+    await expect(page.locator('#practiceScore')).toHaveText('Benar 1 dari 1');
+
+    await page.locator('#practiceShow').click();
+    const rows = await readTable(page);
+    expect(rows).toHaveLength(1);
+    const format = (v) => String(Math.round(v * 100) / 100);
+    expect(rows[0][2]).toBe(`(${format(answer.x)}, ${format(answer.y)})`);
+
+    await page.locator('#practiceNext').click();
+    await expect(page.locator('#practiceFeedback')).toHaveText('');
+    await expect(page.locator('#practiceAnswer')).toHaveValue('');
 });
