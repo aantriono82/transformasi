@@ -1,7 +1,8 @@
 // ==================== DEKLARASI ELEMEN DOM ====================
 const {
     parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, createHistory, placeLabels,
-    affineCoefficients, formatAffineRule, affineMatrix, generalRule, createQuestion, checkAnswer
+    affineCoefficients, formatAffineRule, affineMatrix, generalRule, createQuestion, checkAnswer,
+    encodeState, decodeState
 } = AppUtils;
 
 const canvas = document.getElementById('transformCanvas');
@@ -148,10 +149,13 @@ function init() {
     initBackToTop();
     registerServiceWorker();
 
-    // Mulai dengan kanvas kosong; simpan sebagai titik awal riwayat undo
+    // Mulai dari keadaan di URL (tautan bersama) atau kanvas kosong; simpan
+    // sebagai titik awal riwayat undo.
+    const restored = restoreFromUrl();
     saveHistory();
     updateCoordinateTable();
     redrawCanvas();
+    if (restored) showMessage('Bentuk dari tautan dimuat', 'success');
 }
 
 // ==================== TAB TRANSFORMASI ====================
@@ -185,6 +189,7 @@ function setActiveTab(tab, { focus = false, updateHash = true, record = true, ke
     if (updateHash && location.hash !== '#' + tab.dataset.hash) {
         window.history.replaceState(null, '', '#' + tab.dataset.hash);
     }
+    scheduleUrlSync();
     if (changed && !keepResult && transformedPoints.length > 0) {
         transformedPoints = [];
         resultMeta = null;
@@ -305,6 +310,7 @@ function setupEventListeners() {
         chip.addEventListener('click', () => loadPreset(chip.dataset.preset));
     });
     $('chainTransform').addEventListener('click', chainTransform);
+    $('copyShapeLink').addEventListener('click', copyShapeLink);
     $('compositionReset').addEventListener('click', resetComposition);
     sheetToggle.addEventListener('click', () => setSheetExpanded(controlPanel.classList.contains('is-collapsed')));
     undoButton.addEventListener('click', undo);
@@ -356,6 +362,7 @@ function handleParamChange() {
     syncParamDisplays();
     updateTransformStatus();
     redrawCanvas();
+    scheduleUrlSync();
 }
 
 function setupCanvasResizeHandling() {
@@ -397,6 +404,7 @@ function saveHistory() {
         compositionOrigin: compositionOrigin && clonePoints(compositionOrigin)
     });
     updateHistoryButtons();
+    scheduleUrlSync();
 }
 
 function restoreSnapshot(snapshot) {
@@ -1329,6 +1337,30 @@ function positionRangeBubble(input) {
     bubble.style.left = `calc(${ratio * 100}% + ${(0.5 - ratio) * 16}px)`;
 }
 
+// Isi kolom parameter suatu jenis transformasi (kebalikan getTransformParams).
+function setTransformInputs(type, params) {
+    const set = (id, value) => {
+        if (value !== undefined && value !== null) $(id).value = String(value);
+    };
+    if (type === 'reflection') {
+        set('reflectionAxis', params.axis);
+        set('reflectionK', params.k);
+        set('reflectionM', params.m);
+        set('reflectionC', params.c);
+    } else if (type === 'rotation') {
+        set('rotationAngle', params.angle);
+        set('rotationCenterX', params.centerX);
+        set('rotationCenterY', params.centerY);
+    } else if (type === 'dilation') {
+        set('scaleFactor', params.factor);
+        set('dilationCenterX', params.centerX);
+        set('dilationCenterY', params.centerY);
+    } else if (type === 'translation') {
+        set('translationX', params.tx);
+        set('translationY', params.ty);
+    }
+}
+
 function computeTransform(type, params) {
     return GeometryTransformations.apply(points, type, params);
 }
@@ -1618,6 +1650,86 @@ function updateFormula() {
     example.append(original, ' → ', result);
 }
 
+// ==================== KEADAAN DI URL ====================
+
+let urlSyncTimer = 0;
+
+// Keadaan yang dibagikan: hasil yang sudah diterapkan (bila ada), atau
+// parameter yang sedang diatur. Komposisi menyimpan bentuk awal + langkahnya.
+function currentShareState() {
+    const applied = Boolean(resultMeta && resultMeta.params && resultMeta.transform === currentTransform);
+    return {
+        points: compositionOrigin || points,
+        closed: isPolygonClosed,
+        transform: currentTransform,
+        params: applied ? resultMeta.params : getTransformParams(currentTransform),
+        applied,
+        steps: compositionSteps
+    };
+}
+
+function syncUrlNow() {
+    clearTimeout(urlSyncTimer);
+    urlSyncTimer = 0;
+    const query = encodeState(currentShareState());
+    const url = location.pathname + (query ? `?${query}` : '') + location.hash;
+    if (url !== location.pathname + location.search + location.hash) {
+        window.history.replaceState(null, '', url);
+    }
+}
+
+// Slider memicu banyak perubahan; URL cukup diperbarui setelah jeda singkat.
+function scheduleUrlSync() {
+    clearTimeout(urlSyncTimer);
+    urlSyncTimer = setTimeout(syncUrlNow, 200);
+}
+
+function restoreFromUrl() {
+    const state = decodeState(location.search, currentTransform);
+    if (!state) return false;
+    if (state.params) setTransformInputs(currentTransform, state.params);
+    syncParamDisplays();
+
+    compositionSteps = state.steps;
+    compositionOrigin = state.steps.length ? clonePoints(state.points) : null;
+    points = GeometryTransformations.applySteps(clonePoints(state.points), state.steps);
+    isPolygonClosed = state.closed;
+    let center = null;
+    if (state.applied) {
+        transformedPoints = computeTransform(currentTransform, state.params);
+        if (currentTransform === 'rotation' || currentTransform === 'dilation') {
+            center = { x: state.params.centerX, y: state.params.centerY };
+        }
+        resultMeta = { transform: currentTransform, center, params: state.params };
+    }
+    ensureVisible(center ? [center] : []);
+    updateTransformStatus();
+    return true;
+}
+
+async function copyText(text) {
+    try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard API tidak tersedia');
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        return legacyCopy(text);
+    }
+}
+
+async function copyShapeLink() {
+    if (!points.length) {
+        showMessage('Buat bentuk terlebih dahulu!', 'error');
+        return;
+    }
+    syncUrlNow();
+    if (await copyText(location.href)) {
+        showMessage('Tautan bentuk ini berhasil disalin', 'success');
+    } else {
+        showMessage('Gagal menyalin tautan', 'error');
+    }
+}
+
 // ==================== TEMA TERANG/GELAP ====================
 
 const themeToggle = $('themeToggle');
@@ -1720,23 +1832,7 @@ function checkPracticeAnswer() {
 // Tampilkan soal di kanvas: titik A, tab dan parameter yang sesuai, lalu terapkan.
 function showPracticeOnCanvas() {
     const { question } = practice;
-    const { params } = question;
-    const set = (id, value) => { $(id).value = String(value); };
-    if (question.type === 'reflection') {
-        set('reflectionAxis', params.axis);
-        set('reflectionK', params.k);
-    } else if (question.type === 'rotation') {
-        set('rotationAngle', params.angle);
-        set('rotationCenterX', params.centerX);
-        set('rotationCenterY', params.centerY);
-    } else if (question.type === 'dilation') {
-        set('scaleFactor', params.factor);
-        set('dilationCenterX', params.centerX);
-        set('dilationCenterY', params.centerY);
-    } else {
-        set('translationX', params.tx);
-        set('translationY', params.ty);
-    }
+    setTransformInputs(question.type, question.params);
     const tab = transformTabs.find(item => item.dataset.transform === question.type);
     setActiveTab(tab);
     handleParamChange();
@@ -1770,6 +1866,7 @@ function initShareButtons() {
     Object.entries(shareTargets).forEach(([id, buildUrl]) => {
         $(id).addEventListener('click', (e) => {
             e.preventDefault();
+            syncUrlNow();
             window.open(buildUrl(window.location.href), '_blank', 'noopener,noreferrer');
         });
     });
@@ -1777,15 +1874,10 @@ function initShareButtons() {
     const copyButton = $('share-copy');
     copyButton.addEventListener('click', async (e) => {
         e.preventDefault();
-        const fullText = shareText + window.location.href;
-        try {
-            if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard API tidak tersedia');
-            await navigator.clipboard.writeText(fullText);
-        } catch {
-            if (!legacyCopy(fullText)) {
-                showMessage('Gagal menyalin tautan', 'error');
-                return;
-            }
+        syncUrlNow();
+        if (!await copyText(shareText + window.location.href)) {
+            showMessage('Gagal menyalin tautan', 'error');
+            return;
         }
         const iconLink = copyButton.querySelector('.fa-link');
         const iconCheck = copyButton.querySelector('.fa-check');
