@@ -94,38 +94,63 @@ function init() {
     setupEventListeners();
     setupHelpModal();
     
-    // Set tombol refleksi sebagai aktif default
-    const defaultTransformBtn = document.querySelector('[data-transform="reflection"]');
-    if (defaultTransformBtn) {
-        setActiveTransformButton(defaultTransformBtn);
-        initShareButtons();
-         initBackToTop();
-    }
+    // Buka tab dari hash URL (mis. #rotasi), default ke refleksi
+    setActiveTab(findTabByHash(location.hash) || transformTabs[0], { updateHash: false });
+    initShareButtons();
+    initBackToTop();
     
-    // Buat contoh bentuk awal
-    createSampleShape();
+    // Mulai dengan kanvas kosong; simpan sebagai titik awal riwayat undo
+    saveHistory();
+    redrawCanvas();
 }
 
 // ==================== FUNGSI TOMBOL TRANSFORMASI ====================
 
-// Fungsi untuk mengatur tombol transformasi aktif
-function setActiveTransformButton(button) {
-    // Hapus kelas active dari semua tombol
-    document.querySelectorAll('.transform-btn').forEach(btn => {
-        btn.classList.remove('active-transform', 'border-secondary-500');
-        btn.classList.add('border-transparent');
-        btn.setAttribute('aria-pressed', 'false');
+const transformTabs = Array.from(document.querySelectorAll('.transform-tab'));
+
+function findTabByHash(hash) {
+    const key = (hash || '').replace(/^#/, '');
+    return transformTabs.find(tab => tab.dataset.hash === key || tab.dataset.transform === key);
+}
+
+// Aktifkan satu tab transformasi; hasil transformasi tab sebelumnya dibersihkan
+// agar kanvas hanya menampilkan hasil dari tab yang sedang dibuka.
+function setActiveTab(tab, { focus = false, updateHash = true } = {}) {
+    if (!tab) return;
+    const changed = tab.dataset.transform !== currentTransform;
+
+    transformTabs.forEach(item => {
+        const selected = item === tab;
+        item.classList.toggle('is-active', selected);
+        item.setAttribute('aria-selected', String(selected));
+        item.tabIndex = selected ? 0 : -1;
     });
-    
-    // Tambahkan kelas active ke tombol yang diklik
-    button.classList.remove('border-transparent');
-    button.classList.add('active-transform', 'border-secondary-500');
-    button.setAttribute('aria-pressed', 'true');
-    
-    // Tampilkan parameter yang sesuai
-    currentTransform = button.dataset.transform;
+    if (focus) tab.focus();
+
+    currentTransform = tab.dataset.transform;
     showTransformParams(currentTransform);
     updateTransformStatus();
+
+    if (updateHash && location.hash !== '#' + tab.dataset.hash) {
+        window.history.replaceState(null, '', '#' + tab.dataset.hash);
+    }
+    if (changed && transformedPoints.length > 0) {
+        transformedPoints = [];
+        redrawCanvas();
+        updateCoordinateTable();
+    }
+}
+
+function handleTabKeydown(event) {
+    const index = transformTabs.indexOf(event.currentTarget);
+    let next = null;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = transformTabs[(index + 1) % transformTabs.length];
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = transformTabs[(index - 1 + transformTabs.length) % transformTabs.length];
+    else if (event.key === 'Home') next = transformTabs[0];
+    else if (event.key === 'End') next = transformTabs[transformTabs.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    setActiveTab(next, { focus: true });
 }
 
 function updateTransformStatus() {
@@ -191,11 +216,14 @@ function setupEventListeners() {
     canvas.addEventListener('wheel', handleCanvasWheel, { passive: false });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     
-    // Event listeners untuk tombol transformasi
-    document.querySelectorAll('.transform-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            setActiveTransformButton(this);
-        });
+    // Event listeners untuk tab transformasi
+    transformTabs.forEach(tab => {
+        tab.addEventListener('click', () => setActiveTab(tab));
+        tab.addEventListener('keydown', handleTabKeydown);
+    });
+    window.addEventListener('hashchange', () => {
+        const tab = findTabByHash(location.hash);
+        if (tab) setActiveTab(tab, { updateHash: false });
     });
     
     // Event listeners untuk tombol aksi
@@ -860,10 +888,8 @@ function redrawCanvas() {
 // Tampilkan parameter transformasi yang dipilih
 function showTransformParams(transformType) {
     document.querySelectorAll('.transform-params').forEach(param => {
-        param.style.display = 'none';
+        param.classList.toggle('hidden', param.id !== `${transformType}-params`);
     });
-    
-    document.getElementById(`${transformType}-params`).style.display = 'block';
     
     // Jika refleksi, periksa apakah kustom dipilih
     if (transformType === 'reflection') {

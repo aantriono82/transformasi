@@ -150,86 +150,6 @@ canvas {
     animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
 }
 
-/* ========== TRANSFORM BUTTON STYLES ========== */
-/* Efek untuk tombol transformasi aktif */
-.active-transform {
-    position: relative;
-    z-index: 1;
-    border-color: #f59e0b !important;
-    border-width: 2px !important;
-    background: linear-gradient(135deg, rgba(30, 58, 138, 0.9), rgba(37, 99, 235, 0.9)) !important;
-    box-shadow: 0 0 15px rgba(245, 158, 11, 0.5) !important;
-    transform: translateY(-2px);
-    transition: all 0.3s ease;
-    animation: pulse-orange 2s infinite;
-}
-
-/* Efek hover untuk semua tombol transformasi */
-.transform-btn:hover {
-    border-color: rgba(245, 158, 11, 0.5) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Style khusus untuk border oranye */
-.border-orange-active {
-    border-color: #f59e0b !important;
-    border-width: 2px !important;
-}
-
-/* Animation for active button */
-@keyframes pulse-orange {
-    0%, 100% {
-        box-shadow: 0 0 5px rgba(245, 158, 11, 0.5);
-    }
-    50% {
-        box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
-    }
-}
-
-.transform-btn {
-    position: relative;
-    overflow: hidden;
-}
-
-.transform-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s;
-}
-
-.transform-btn:hover::before {
-    left: 100%;
-}
-
-.active-transform::after {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(45deg, #f59e0b, #ff9800, #f59e0b);
-    border-radius: inherit;
-    z-index: -1;
-    animation: border-glow 3s linear infinite;
-}
-
-@keyframes border-glow {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
-}
-
-.transform-btn * {
-    position: relative;
-    z-index: 2;
-}
-
 /* ========== FOOTER STYLES ========== */
 footer {
     position: relative;
@@ -273,16 +193,6 @@ footer {
 
 /* Mobile Small (< 475px) */
 @media (max-width: 475px) {
-    .transform-btn {
-        padding: 0.625rem !important;
-        font-size: 0.75rem !important;
-    }
-    
-    .transform-btn i {
-        font-size: 1rem !important;
-        margin-bottom: 0.25rem !important;
-    }
-    
     canvas {
         border-radius: 0.5rem !important;
     }
@@ -295,28 +205,13 @@ footer {
 
 /* Mobile Medium (476px - 640px) */
 @media (min-width: 476px) and (max-width: 640px) {
-    .transform-btn {
-        padding: 0.75rem !important;
-    }
-    
     canvas {
         border-radius: 0.75rem !important;
     }
 }
 
-/* Tablet Portrait (641px - 768px) */
-@media (min-width: 641px) and (max-width: 768px) {
-    .transform-btn {
-        padding: 0.875rem !important;
-    }
-}
-
 /* Tablet Landscape (769px - 1024px) */
 @media (min-width: 769px) and (max-width: 1024px) {
-    .transform-btn {
-        padding: 1rem !important;
-    }
-    
     canvas {
         border-radius: 1rem !important;
     }
@@ -432,7 +327,6 @@ footer {
 /* ========== HIGH CONTRAST MODE ========== */
 @media (prefers-contrast: high) {
     button,
-    .transform-btn,
     .action-btn {
         border-width: 3px !important;
     }
@@ -579,38 +473,65 @@ body.app-shell {
     pointer-events: none;
 }
 
-.transform-btn {
+/* ========== TAB JENIS TRANSFORMASI ========== */
+.transform-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.7);
+    box-shadow: 0 10px 25px rgba(2, 6, 23, 0.25);
+}
+
+@media (min-width: 640px) {
+    .transform-tabs {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.transform-tab {
     appearance: none;
-    width: 100%;
-    border-color: var(--app-border) !important;
-    background: rgba(30, 41, 59, 0.8) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--app-muted);
+    font-weight: 800;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.transform-tab:hover {
+    background: rgba(148, 163, 184, 0.12);
     color: var(--app-text);
 }
 
-.transform-btn:hover,
-.transform-btn:focus-visible {
-    border-color: rgba(56, 189, 248, 0.8) !important;
-    background: #263750 !important;
-    transform: translateY(-2px);
+.transform-tab.is-active {
+    background: #f8fafc;
+    color: #123e6d;
+    box-shadow: 0 2px 8px rgba(2, 6, 23, 0.3);
 }
 
-.active-transform {
-    border-color: var(--app-orange) !important;
-    background: linear-gradient(135deg, rgba(30, 64, 175, 0.9), rgba(30, 41, 59, 0.95)) !important;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16) !important;
-    animation: none;
+.transform-tab.is-active .transform-tab-icon {
+    color: var(--app-orange);
 }
 
-.active-transform::after,
-.transform-btn::before {
-    display: none;
+.transform-tab-icon {
+    font-size: 1rem;
 }
 
 button,
 input,
 select,
 textarea,
-.transform-btn {
+.transform-tab {
     transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 

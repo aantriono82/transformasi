@@ -40,7 +40,7 @@
         /* Touch-friendly tap targets */
         @media (max-width: 768px) {
             button, 
-            .transform-btn, 
+            .transform-tab,
             .action-btn,
             input[type="range"],
             select {
@@ -113,6 +113,26 @@
             </p>
         </header>
         
+        <!-- Tab Jenis Transformasi -->
+        <nav class="transform-tabs mb-4 sm:mb-6" role="tablist" aria-label="Jenis transformasi">
+            <button type="button" id="tab-reflection" class="transform-tab is-active" role="tab" aria-selected="true" aria-controls="reflection-params" data-transform="reflection" data-hash="refleksi">
+                <i class="fas fa-exchange-alt transform-tab-icon" aria-hidden="true"></i>
+                <span class="transform-tab-label">Refleksi</span>
+            </button>
+            <button type="button" id="tab-rotation" class="transform-tab" role="tab" aria-selected="false" aria-controls="rotation-params" data-transform="rotation" data-hash="rotasi" tabindex="-1">
+                <i class="fas fa-sync-alt transform-tab-icon" aria-hidden="true"></i>
+                <span class="transform-tab-label">Rotasi</span>
+            </button>
+            <button type="button" id="tab-dilation" class="transform-tab" role="tab" aria-selected="false" aria-controls="dilation-params" data-transform="dilation" data-hash="dilatasi" tabindex="-1">
+                <i class="fas fa-expand-alt transform-tab-icon" aria-hidden="true"></i>
+                <span class="transform-tab-label">Dilatasi</span>
+            </button>
+            <button type="button" id="tab-translation" class="transform-tab" role="tab" aria-selected="false" aria-controls="translation-params" data-transform="translation" data-hash="translasi" tabindex="-1">
+                <i class="fas fa-arrows-alt transform-tab-icon" aria-hidden="true"></i>
+                <span class="transform-tab-label">Translasi</span>
+            </button>
+        </nav>
+
         <!-- Main Content - Responsive Layout -->
         <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10">
             <!-- Visualization Section -->
@@ -249,37 +269,10 @@
                     <i class="fas fa-sliders-h text-secondary-500 mr-2 sm:mr-3 text-lg sm:text-xl"></i> Kontrol Transformasi
                 </h2>
                 
-                <!-- Transform Type Selector - Responsive Grid -->
-<div class="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
-    <!-- Refleksi Button - Default Active -->
-    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-secondary-500 rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 shadow-md active-transform" data-transform="reflection" aria-pressed="true">
-        <i class="fas fa-exchange-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
-        <span class="text-xs sm:text-sm md:text-base">Refleksi</span>
-    </button>
-    
-    <!-- Rotasi Button -->
-    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="rotation" aria-pressed="false">
-        <i class="fas fa-sync-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
-        <span class="text-xs sm:text-sm md:text-base">Rotasi</span>
-    </button>
-    
-    <!-- Dilatasi Button -->
-    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="dilation" aria-pressed="false">
-        <i class="fas fa-expand-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
-        <span class="text-xs sm:text-sm md:text-base">Dilatasi</span>
-    </button>
-    
-    <!-- Translasi Button -->
-    <button type="button" class="transform-btn bg-primary-700 hover:bg-primary-600 border-2 border-transparent rounded-lg sm:rounded-xl p-3 sm:p-4 text-white font-medium cursor-pointer text-center transition-all duration-300 hover:shadow-md" data-transform="translation" aria-pressed="false">
-        <i class="fas fa-arrows-alt text-base sm:text-lg mb-1 sm:mb-2 block"></i> 
-        <span class="text-xs sm:text-sm md:text-base">Translasi</span>
-    </button>
-</div>
-                
                 <!-- Parameters Container - Responsive -->
                 <div class="bg-primary-900/60 rounded-xl p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 border border-primary-500/30">
                     <!-- Reflection Parameters -->
-                    <div id="reflection-params" class="transform-params space-y-4 sm:space-y-6">
+                    <div id="reflection-params" role="tabpanel" aria-labelledby="tab-reflection" tabindex="0" class="transform-params space-y-4 sm:space-y-6">
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Refleksi (Pencerminan)</h3>
                         
                         <div>
@@ -313,7 +306,7 @@
                     </div>
                     
                     <!-- Rotation Parameters -->
-                    <div id="rotation-params" class="transform-params space-y-4 sm:space-y-6 hidden">
+                    <div id="rotation-params" role="tabpanel" aria-labelledby="tab-rotation" tabindex="0" class="transform-params space-y-4 sm:space-y-6 hidden">
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Rotasi (Perputaran)</h3>
                         
                         <div>
@@ -340,7 +333,7 @@
                     </div>
                     
                     <!-- Dilation Parameters -->
-                    <div id="dilation-params" class="transform-params space-y-4 sm:space-y-6 hidden">
+                    <div id="dilation-params" role="tabpanel" aria-labelledby="tab-dilation" tabindex="0" class="transform-params space-y-4 sm:space-y-6 hidden">
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Dilatasi (Penskalaan)</h3>
                         
                         <div>
@@ -367,7 +360,7 @@
                     </div>
                     
                     <!-- Translation Parameters -->
-                    <div id="translation-params" class="transform-params space-y-4 sm:space-y-6 hidden">
+                    <div id="translation-params" role="tabpanel" aria-labelledby="tab-translation" tabindex="0" class="transform-params space-y-4 sm:space-y-6 hidden">
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Translasi (Pergeseran)</h3>
                         
                         <div>
