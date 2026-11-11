@@ -14,7 +14,7 @@ test('index memakai aset lokal untuk stylesheet runtime', () => {
 
 test('metadata tidak menunjuk aset lokal yang tidak tersedia', () => {
     const html = fs.readFileSync('index.html', 'utf8');
-    for (const [, assetPath] of html.matchAll(/(?:href|content)="((?:assets|images)\/[^"]+)"/g)) {
+    for (const [, assetPath] of html.matchAll(/(?:href|content)="((?:assets|images)\/[^"?]+)(?:\?[^"]*)?"/g)) {
         assert.ok(fs.existsSync(assetPath), 'aset metadata tidak ditemukan: ' + assetPath);
     }
 });
@@ -27,7 +27,7 @@ test('hasil build CSS dan font lokal tersedia', () => {
 
 test('index memuat semua skrip aplikasi sesuai urutan dependensi', () => {
     const html = fs.readFileSync('index.html', 'utf8');
-    const order = ['transformations.js', 'utils.js', 'script.js'].map(src => html.indexOf(`<script src="${src}"`));
+    const order = ['transformations.js', 'utils.js', 'script.js'].map(src => html.search(new RegExp(`<script src="${src.replace('.', '\\.')}(\\?v=[^"]*)?"`)));
     assert.ok(order.every(index => index >= 0), 'semua skrip harus dimuat');
     assert.deepEqual([...order].sort((a, b) => a - b), order, 'script.js harus dimuat terakhir');
 });

@@ -37,15 +37,35 @@ function computeVersion(files) {
     return hash.digest('hex').slice(0, 12);
 }
 
+// Aset yang ditautkan index.html dengan penanda versi (?v=hash isi file), agar
+// browser tidak memakai salinan lama dari cache HTTP setelah rilis baru.
+const VERSIONED_ASSETS = ['assets/fontawesome.min.css', 'assets/app.css', 'transformations.js', 'utils.js', 'script.js'];
+
+function assetHash(file) {
+    return crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex').slice(0, 10);
+}
+
+function stampIndex(html) {
+    return VERSIONED_ASSETS.reduce((result, file) => {
+        const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp(`(href|src)="${escaped}(?:\\?v=[^"]*)?"`, 'g');
+        return result.replace(pattern, `$1="${file}?v=${assetHash(file)}"`);
+    }, html);
+}
+
 function render(swSource, files, version) {
     return swSource
         .replace(/const VERSION = '[^']*';/, `const VERSION = '${version}';`)
         .replace(/const PRECACHE = \[[\s\S]*?\];/, `const PRECACHE = ${JSON.stringify(files, null, 4).replace(/"/g, "'")};`);
 }
 
-module.exports = { listPrecache, computeVersion, render };
+module.exports = { listPrecache, computeVersion, render, stampIndex, assetHash, VERSIONED_ASSETS };
 
 if (require.main === module) {
+    // index.html diberi penanda versi dulu, karena isinya ikut menentukan VERSION.
+    const indexPath = path.join(root, 'index.html');
+    fs.writeFileSync(indexPath, stampIndex(fs.readFileSync(indexPath, 'utf8')));
+
     const swPath = path.join(root, 'sw.js');
     const files = listPrecache();
     const version = computeVersion(files);

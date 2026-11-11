@@ -1,6 +1,6 @@
 /* Service worker: aplikasi tetap bisa dipakai tanpa koneksi internet.
  * VERSION dan PRECACHE ditulis otomatis oleh `npm run build:sw`. */
-const VERSION = '32712e00a622';
+const VERSION = 'a8b94b84889a';
 const PRECACHE = [
     './',
     'index.html',
@@ -23,7 +23,10 @@ const CACHE_NAME = `transformasi-${VERSION}`;
 
 self.addEventListener('install', (event) => {
     // addAll bersifat atomik: semua aset versi ini tersimpan, atau tidak sama sekali.
-    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)));
+    // cache: 'reload' melewati cache HTTP browser; tanpa ini, aset lama yang masih
+    // tersimpan (CDN mengizinkan cache sampai berjam-jam) bisa ikut terkunci di versi baru.
+    const requests = PRECACHE.map(url => new Request(url, { cache: 'reload' }));
+    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(requests)));
 });
 
 self.addEventListener('activate', (event) => {

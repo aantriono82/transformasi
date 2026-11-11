@@ -33,3 +33,19 @@ test('index menautkan manifest dan ikon', () => {
     assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/);
     assert.match(html, /rel="apple-touch-icon" href="assets\/icons\/apple-touch-icon\.png"/);
 });
+
+test('index menautkan CSS/JS dengan penanda versi sesuai isinya (jalankan npm run build:sw bila gagal)', () => {
+    const { stampIndex, assetHash, VERSIONED_ASSETS } = require('../scripts/build-sw.js');
+    const html = fs.readFileSync('index.html', 'utf8');
+    assert.equal(stampIndex(html), html, 'penanda versi di index.html sudah usang');
+    for (const file of VERSIONED_ASSETS) {
+        assert.ok(html.includes(`${file}?v=${assetHash(file)}"`), `${file} belum diberi penanda versi`);
+    }
+});
+
+test('service worker mengunduh precache tanpa cache HTTP browser', () => {
+    const sw = fs.readFileSync('sw.js', 'utf8');
+    assert.match(sw, /new Request\(url, \{ cache: 'reload' \}\)/);
+    // Permintaan berpenanda versi tetap cocok dengan entri precache.
+    assert.match(sw, /cache\.match\(request, \{ ignoreSearch: true \}\)/);
+});
