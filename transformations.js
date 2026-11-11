@@ -1,11 +1,17 @@
 /* Pure geometry operations kept separate from DOM and canvas rendering. */
 (function (global) {
-    function reflect(points, axis, m = 1, c = 0) {
+    /**
+     * Refleksi terhadap: 'x', 'y', 'y=x', 'y=-x', 'x=h' / 'y=k' (konstanta k),
+     * atau garis kustom y = mx + c (axis lain, mis. 'custom').
+     */
+    function reflect(points, axis, { m = 1, c = 0, k = 0 } = {}) {
         return points.map(({ x, y }) => {
             if (axis === 'x') return { x, y: -y };
             if (axis === 'y') return { x: -x, y };
             if (axis === 'y=x') return { x: y, y: x };
             if (axis === 'y=-x') return { x: -y, y: -x };
+            if (axis === 'x=h') return { x: 2 * k - x, y };
+            if (axis === 'y=k') return { x, y: 2 * k - y };
             const d = (x + (y - c) * m) / (1 + m * m);
             return { x: 2 * d - x, y: 2 * d * m - y + 2 * c };
         });

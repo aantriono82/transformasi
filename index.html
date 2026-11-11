@@ -145,7 +145,8 @@
                 <!-- Canvas Container with Responsive Height -->
                 <div class="canvas-shell bg-white rounded-lg md:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-inner">
                     <div class="canvas-status" aria-live="polite">Refleksi terhadap sumbu X</div>
-                    <canvas id="transformCanvas" class="w-full h-48 xs:h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96 rounded" aria-label="Bidang koordinat interaktif untuk melihat transformasi geometri" tabindex="0"></canvas>
+                    <canvas id="transformCanvas" class="w-full h-48 xs:h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96 rounded" aria-label="Bidang koordinat interaktif untuk melihat transformasi geometri" aria-describedby="canvasHint" tabindex="0"></canvas>
+                    <p id="canvasHint" class="sr-only">Klik atau ketuk untuk menambah titik. Saat kanvas difokuskan, gunakan tombol panah untuk menggeser, plus atau minus untuk zoom, dan 0 untuk reset tampilan. Koordinat lengkap tersedia di tabel di bawah.</p>
                 </div>
                 
                 <!-- Canvas Controls - Responsive -->
@@ -164,8 +165,8 @@
                     </button>
                     <div class="w-full xs:w-auto xs:flex-1 flex items-center text-xs xs:text-sm text-blue-200 mt-2 xs:mt-0 px-2">
                         <i class="fas fa-info-circle text-secondary-500 mr-2 text-xs sm:text-sm"></i>
-                        <span class="truncate hidden xs:inline">Klik kanan+tahan: geser | Scroll: zoom</span>
-                        <span class="truncate xs:hidden">Tap+geser: geser | Pinch: zoom</span>
+                        <span class="truncate hidden xs:inline">Klik: tambah titik | Seret: geser | Scroll: zoom</span>
+                        <span class="truncate xs:hidden">Ketuk: tambah titik | Seret: geser | Pinch: zoom</span>
                     </div>
                 </div>
                 
@@ -196,6 +197,7 @@
                             <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">2, -4</span>
                             <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">A(1,2)</span>
                             <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">x=3 y=5</span>
+                            <span class="bg-primary-800/70 px-2 py-1 rounded text-xxs xs:text-xs">(1,5; -2)</span>
                         </div>
                     </div>
                 </div>
@@ -228,8 +230,8 @@
                 
                 <!-- Instructions - Responsive -->
                 <p class="text-blue-200 text-center mb-6 text-xs sm:text-sm md:text-base leading-relaxed px-2">
-                    Gunakan input manual untuk menambahkan titik. Tekan "Tutup Poligon" untuk menyelesaikan bentuk.
-                    <span class="hidden sm:inline">Gunakan klik kanan + drag untuk menggeser dan scroll untuk zoom.</span>
+                    Klik kanvas atau gunakan input manual untuk menambahkan titik. Tekan "Tutup Poligon" untuk menyelesaikan bentuk.
+                    <span class="hidden sm:inline">Seret kanvas untuk menggeser dan scroll untuk zoom.</span>
                 </p>
                 
                 <!-- Coordinate Table - Responsive with Scroll -->
@@ -252,7 +254,7 @@
                                     <tbody id="coordinateTableBody" class="bg-primary-900/50 divide-y divide-primary-700/50" aria-live="polite">
                                         <tr>
                                             <td colspan="3" class="py-4 sm:py-6 text-center text-blue-300 text-sm sm:text-base">
-                                                Belum ada titik. Tambahkan titik menggunakan input manual di atas.
+                                                Belum ada titik. Klik kanvas atau gunakan input manual di atas.
                                             </td>
                                         </tr>
                                     </tbody>
@@ -282,23 +284,30 @@
                                 <option value="y">Sumbu Y (x = 0)</option>
                                 <option value="y=x">Garis y = x</option>
                                 <option value="y=-x">Garis y = -x</option>
+                                <option value="x=h">Garis vertikal x = h</option>
+                                <option value="y=k">Garis horizontal y = k</option>
                                 <option value="custom">Garis Kustom (y = mx + c)</option>
                             </select>
                         </div>
                         
+                        <div id="lineConstantParams" class="hidden">
+                            <label for="reflectionK" id="reflectionKLabel" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Nilai h:</label>
+                            <input type="number" id="reflectionK" value="2" step="0.5" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                        </div>
+
                         <div id="customReflectionParams" class="space-y-4 sm:space-y-6 hidden">
                             <div>
                                 <label for="reflectionM" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Kemiringan (m):</label>
                                 <div class="flex items-center gap-2 sm:gap-4">
                                     <input type="range" id="reflectionM" min="-5" max="5" step="0.1" value="1" class="flex-1">
-                                    <span id="reflectionMValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">1.0</span>
+                                    <span id="reflectionMValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">1</span>
                                 </div>
                             </div>
                             
                             <div>
                                 <label for="reflectionC" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Konstanta (c):</label>
                                 <div class="flex items-center gap-2 sm:gap-4">
-                                    <input type="range" id="reflectionC" min="-200" max="200" step="1" value="0" class="flex-1">
+                                    <input type="range" id="reflectionC" min="-20" max="20" step="0.5" value="0" class="flex-1">
                                     <span id="reflectionCValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">0</span>
                                 </div>
                             </div>
@@ -310,9 +319,9 @@
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Rotasi (Perputaran)</h3>
                         
                         <div>
-                            <label for="rotationAngle" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Sudut Rotasi (derajat):</label>
+                            <label for="rotationAngle" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Sudut Rotasi (derajat, negatif = searah jarum jam):</label>
                             <div class="flex items-center gap-2 sm:gap-4">
-                                <input type="range" id="rotationAngle" min="0" max="360" step="1" value="90" class="flex-1">
+                                <input type="range" id="rotationAngle" min="-360" max="360" step="1" value="90" class="flex-1">
                                 <span id="rotationAngleValue" class="text-white font-bold min-w-12 sm:min-w-16 text-center text-sm sm:text-base">90°</span>
                             </div>
                         </div>
@@ -337,10 +346,10 @@
                         <h3 class="text-lg sm:text-xl font-bold text-secondary-300">Dilatasi (Penskalaan)</h3>
                         
                         <div>
-                            <label for="scaleFactor" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Faktor Skala:</label>
+                            <label for="scaleFactor" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Faktor Skala (k, negatif = bayangan berlawanan arah):</label>
                             <div class="flex items-center gap-2 sm:gap-4">
-                                <input type="range" id="scaleFactor" min="0.1" max="5" step="0.1" value="2" class="flex-1">
-                                <span id="scaleFactorValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">2.0</span>
+                                <input type="range" id="scaleFactor" min="-5" max="5" step="0.1" value="2" class="flex-1">
+                                <span id="scaleFactorValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">2</span>
                             </div>
                         </div>
                         
@@ -368,11 +377,11 @@
                             <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                                 <div>
                                     <label for="translationX" class="block text-blue-200 text-xs sm:text-sm mb-1">Geser X:</label>
-                                    <input type="number" id="translationX" value="50" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                    <input type="number" id="translationX" value="4" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
                                 </div>
                                 <div>
                                     <label for="translationY" class="block text-blue-200 text-xs sm:text-sm mb-1">Geser Y:</label>
-                                    <input type="number" id="translationY" value="30" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
+                                    <input type="number" id="translationY" value="3" step="1" class="w-full px-3 sm:px-4 py-2 bg-primary-800 border border-primary-600 rounded-lg text-white focus:outline-none focus:border-secondary-500 transition-colors text-sm sm:text-base">
                                 </div>
                             </div>
                         </div>
@@ -499,7 +508,7 @@
                     <i class="fas fa-question-circle text-yellow-300 mr-2 sm:mr-3 sm:text-xl md:text-2xl"></i> 
                     <span class="text-white drop-shadow-md">Petunjuk Penggunaan</span>
                 </h2>
-                <button type="button" class="close-modal bg-white/20 hover:bg-white text-white hover:text-blue-800 text-xl sm:text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300">
+                <button type="button" aria-label="Tutup petunjuk" class="close-modal bg-white/20 hover:bg-white text-white hover:text-blue-800 text-xl sm:text-2xl font-bold w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300">
                     &times;
                 </button>
             </div>
@@ -525,7 +534,11 @@
                 <ul class="space-y-2 text-gray-800 text-sm sm:text-base">
                     <li class="flex items-start">
                         <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span><strong class="text-blue-800 font-semibold">Klik Kanan + Drag:</strong> Menggeser tampilan koordinat (pan)</span>
+                        <span><strong class="text-blue-800 font-semibold">Klik / Ketuk:</strong> Menambah titik pada koordinat bulat terdekat</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Seret (klik kiri atau kanan):</strong> Menggeser tampilan koordinat (pan)</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
@@ -539,6 +552,10 @@
                         <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
                         <span><strong class="text-blue-800 font-semibold">Drag (Mobile):</strong> Gunakan satu jari untuk menggeser</span>
                     </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
+                        <span><strong class="text-blue-800 font-semibold">Keyboard:</strong> Fokuskan kanvas, lalu gunakan tombol panah untuk menggeser, + / - untuk zoom, dan 0 untuk reset</span>
+                    </li>
                 </ul>
             </div>
             
@@ -551,7 +568,7 @@
                 <ul class="space-y-2 text-gray-800 text-sm sm:text-base mb-3">
                     <li class="flex items-start">
                         <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span>Gunakan input manual di panel visualisasi</span>
+                        <span>Klik kanvas, atau gunakan input manual di panel visualisasi</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-caret-right text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
@@ -566,6 +583,7 @@
                         <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">x=3 y=5</code>
                         <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">2 -4</code>
                         <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">5; -2</code>
+                        <code class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-mono">(1,5; -2)</code>
                     </div>
                 </div>
             </div>
@@ -577,7 +595,7 @@
                     Membuat Poligon
                 </h3>
                 <ol class="space-y-2 text-gray-800 text-sm sm:text-base list-decimal pl-5">
-                    <li class="pl-2">Tambahkan minimal 3 titik menggunakan input manual</li>
+                    <li class="pl-2">Tambahkan minimal 3 titik dengan klik kanvas atau input manual</li>
                     <li class="pl-2">Titik akan otomatis terhubung dengan garis sesuai urutan</li>
                     <li class="pl-2">Klik "Tutup Poligon" untuk menghubungkan titik pertama dan terakhir</li>
                 </ol>
@@ -592,15 +610,15 @@
                 <ul class="space-y-2 text-gray-800 text-sm sm:text-base">
                     <li class="flex items-start">
                         <i class="fas fa-exchange-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span><strong class="text-blue-800 font-semibold">Refleksi:</strong> Pencerminan terhadap sumbu X, Y, atau garis kustom</span>
+                        <span><strong class="text-blue-800 font-semibold">Refleksi:</strong> Pencerminan terhadap sumbu X, Y, garis y = ±x, x = h, y = k, atau garis kustom. Garis cermin ditampilkan putus-putus di kanvas</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-sync-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span><strong class="text-blue-800 font-semibold">Rotasi:</strong> Perputaran dengan sudut dan pusat yang dapat disesuaikan</span>
+                        <span><strong class="text-blue-800 font-semibold">Rotasi:</strong> Perputaran dengan sudut (positif = berlawanan arah jarum jam) dan pusat yang dapat disesuaikan</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-expand-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span><strong class="text-blue-800 font-semibold">Dilatasi:</strong> Penskalaan dengan faktor dan pusat dilatasi</span>
+                        <span><strong class="text-blue-800 font-semibold">Dilatasi:</strong> Penskalaan dengan faktor k (boleh negatif, tidak boleh 0) dan pusat dilatasi</span>
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-arrows-alt text-blue-500 mt-1 mr-2 text-xs sm:text-sm"></i>
@@ -648,7 +666,7 @@
                     </li>
                     <li class="flex items-start">
                         <i class="fas fa-calculator text-purple-500 mt-1 mr-2 text-xs sm:text-sm"></i>
-                        <span>Semua nilai koordinat ditampilkan dalam bilangan bulat (pembulatan)</span>
+                        <span>Koordinat ditampilkan hingga 2 angka desimal</span>
                     </li>
                 </ul>
             </div>
@@ -663,6 +681,8 @@
     </div>
 </div>
 
+<div id="srAnnouncer" class="sr-only" role="status" aria-live="polite"></div>
+
 <!-- Back to Top Button - Lingkaran Style -->
 <button id="backToTop" class="back-to-top-btn group" title="Kembali ke atas" aria-label="Kembali ke atas">
   <span class="back-to-top-glyph" aria-hidden="true">↑</span>
@@ -671,6 +691,7 @@
 
     <!-- JavaScript -->
     <script src="transformations.js" defer></script>
+    <script src="utils.js" defer></script>
     <script src="script.js" defer></script>
 </body>
 </html>

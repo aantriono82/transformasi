@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Visualisasi interaktif transformasi geometri",
   "scripts": {
-    "check": "node --check script.js && node --check transformations.js",
+    "check": "node --check script.js && node --check transformations.js && node --check utils.js",
     "test": "node --test tests/*.test.js",
     "build:icons": "node scripts/build-icons.js",
     "build:css": "tailwindcss -i ./src/tailwind.css -o ./assets/app.css --minify",

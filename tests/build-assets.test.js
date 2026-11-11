@@ -24,3 +24,18 @@ test('hasil build CSS dan font lokal tersedia', () => {
     assert.ok(fs.existsSync('assets/fontawesome.min.css'));
     assert.ok(fs.existsSync('assets/webfonts/fa-solid-900.woff2'));
 });
+
+test('index memuat semua skrip aplikasi sesuai urutan dependensi', () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const order = ['transformations.js', 'utils.js', 'script.js'].map(src => html.indexOf(`<script src="${src}"`));
+    assert.ok(order.every(index => index >= 0), 'semua skrip harus dimuat');
+    assert.deepEqual([...order].sort((a, b) => a - b), order, 'script.js harus dimuat terakhir');
+});
+
+test('default parameter tetap dalam jangkauan bidang koordinat', () => {
+    const html = fs.readFileSync('index.html', 'utf8');
+    const value = (id) => Number(html.match(new RegExp(`id="${id}"[^>]*value="([^"]+)"`))[1]);
+    assert.ok(Math.abs(value('translationX')) <= 10 && Math.abs(value('translationY')) <= 10);
+    assert.match(html, /id="scaleFactor" min="-5"/);
+    assert.match(html, /id="rotationAngle" min="-360"/);
+});
