@@ -1264,3 +1264,154 @@ button:disabled {
 .app-shell header.app-header::after {
     display: none;
 }
+
+/* ========== WARNA AKSEN PER JENIS TRANSFORMASI ========== */
+body {
+    --accent: #c084fc;
+    --accent-strong: #9333ea;
+}
+
+body[data-transform="rotation"] {
+    --accent: #4ade80;
+    --accent-strong: #16a34a;
+}
+
+body[data-transform="dilation"] {
+    --accent: #f472b6;
+    --accent-strong: #db2777;
+}
+
+body[data-transform="translation"] {
+    --accent: #22d3ee;
+    --accent-strong: #0891b2;
+}
+
+.transform-tab.is-active {
+    box-shadow: inset 0 -3px 0 var(--accent-strong), 0 2px 8px rgba(2, 6, 23, 0.3);
+}
+
+.transform-tab.is-active .transform-tab-icon {
+    color: var(--accent-strong);
+}
+
+.param-title {
+    color: var(--accent);
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.sheet-toggle .sheet-toggle-title i {
+    color: var(--accent);
+}
+
+/* ========== BARIS ATAS KANVAS ========== */
+.canvas-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.canvas-topbar .canvas-status {
+    position: static;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    border-left: 4px solid var(--accent-strong);
+}
+
+.canvas-topbar .canvas-toggle {
+    position: static;
+    flex: 0 0 auto;
+}
+
+/* ========== PILIHAN GARIS REFLEKSI ========== */
+.axis-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+    gap: 0.4rem;
+}
+
+.axis-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.5rem 0.25rem 0.45rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+}
+
+.axis-option:hover {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.axis-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.axis-option svg {
+    width: 2.25rem;
+    height: 2.25rem;
+}
+
+.axis-option-axes {
+    fill: none;
+    stroke: #64748b;
+    stroke-width: 1;
+}
+
+.axis-option-line {
+    stroke: var(--accent);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+}
+
+.axis-option.is-selected {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.axis-option.has-focus {
+    outline: 3px solid rgba(56, 189, 248, 0.75);
+    outline-offset: 2px;
+}
+
+/* ========== TOMBOL NILAI CEPAT ========== */
+.quick-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+}
+
+.quick-value {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.quick-value:hover {
+    border-color: var(--accent);
+}
+
+.quick-value.is-selected {
+    border-color: var(--accent);
+    background: var(--accent-strong);
+    color: #fff;
+}

@@ -22,11 +22,11 @@ test('panel kontrol menjadi bottom sheet yang bisa dibuka dan ditutup', async ({
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator('#applyTransform')).toBeInViewport();
-    await expect(page.locator('#reflectionAxis')).toBeHidden();
+    await expect(page.locator('.axis-options')).toBeHidden();
 
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('#reflectionAxis')).toBeVisible();
+    await expect(page.locator('.axis-options')).toBeVisible();
 
     // Terapkan menutup sheet agar animasi di kanvas terlihat.
     await page.locator('#sampleShape').click();

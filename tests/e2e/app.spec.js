@@ -75,11 +75,11 @@ test('label status mengikuti parameter rotasi, dilatasi, dan refleksi', async ({
     await expect(status(page)).toHaveText('Dilatasi faktor -1.5 dengan pusat (0, 0)');
 
     await page.locator('#tab-reflection').click();
-    await page.locator('#reflectionAxis').selectOption('y=k');
+    await page.locator('.axis-option:has(input[value="y=k"])').click();
     await expect(page.locator('#reflectionKLabel')).toHaveText('Nilai k:');
     await page.locator('#reflectionK').fill('-1');
     await expect(status(page)).toHaveText('Refleksi terhadap garis y = -1');
-    await page.locator('#reflectionAxis').selectOption('custom');
+    await page.locator('.axis-option:has(input[value="custom"])').click();
     await expect(page.locator('#customReflectionParams')).toBeVisible();
     await expect(page.locator('#lineConstantParams')).toBeHidden();
 });
@@ -100,7 +100,7 @@ test('dilatasi negatif dihitung benar dan faktor 0 ditolak', async ({ page }) =>
 });
 
 test('refleksi terhadap garis x = h', async ({ page }) => {
-    await page.locator('#reflectionAxis').selectOption('x=h');
+    await page.locator('.axis-option:has(input[value="x=h"])').click();
     await page.locator('#reflectionK').fill('1');
     await page.locator('#manualPointInput').fill('(3, 2)');
     await page.locator('#addManualPoint').click();
@@ -217,7 +217,7 @@ test('ekspor menghasilkan PNG berlatar putih', async ({ page }) => {
 
 test('label titik yang berdekatan tidak bertumpuk', async ({ page }) => {
     await page.locator('#sampleShape').click();
-    await page.locator('#reflectionAxis').selectOption('custom');
+    await page.locator('.axis-option:has(input[value="custom"])').click();
     await setRange(page, '#reflectionM', 0.5);
     await setRange(page, '#reflectionC', 1);
     await page.locator('#applyTransform').click();
@@ -316,4 +316,87 @@ test('latihan: jawaban benar menambah skor, lihat di kanvas memuat soal', async 
     await page.locator('#practiceNext').click();
     await expect(page.locator('#practiceFeedback')).toHaveText('');
     await expect(page.locator('#practiceAnswer')).toHaveValue('');
+});
+
+test('seret titik asli: bayangan ikut bergerak dan bisa di-undo', async ({ page }) => {
+    await page.locator('#sampleShape').click();
+    await page.locator('#applyTransform').click(); // refleksi sumbu X
+    await page.waitForFunction(() => animation === null);
+    await page.evaluate(() => canvas.scrollIntoView({ block: 'center' }));
+
+    const from = await canvasPointFor(page, -3, 2);
+    const to = await canvasPointFor(page, -4, 3);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.mouse.up();
+
+    const rows = await readTable(page);
+    expect(rows).toHaveLength(5);
+    expect(rows[0]).toEqual(['P1', '(-4, 3)', '(-4, -3)']);
+    await expect(page.locator('#srAnnouncer')).toHaveText('Titik P1 dipindah ke (-4, 3)');
+
+    await page.locator('#undoAction').click();
+    expect((await readTable(page))[0]).toEqual(['P1', '(-3, 2)', '(-3, -2)']);
+});
+
+test('seret pusat rotasi mengubah input pusat', async ({ page }) => {
+    await page.locator('#tab-rotation').click();
+    const from = await canvasPointFor(page, 0, 0);
+    const to = await canvasPointFor(page, 2, -1);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.locator('#rotationCenterX')).toHaveValue('2');
+    await expect(page.locator('#rotationCenterY')).toHaveValue('-1');
+    await expect(status(page)).toHaveText('Rotasi 90° dengan pusat (2, -1)');
+});
+
+test('ketuk P1 menutup poligon; ketuk titik tidak menambah titik ganda', async ({ page }) => {
+    for (const [x, y] of [[0, 0], [3, 0], [0, 3]]) {
+        const target = await canvasPointFor(page, x, y);
+        await page.mouse.click(target.x, target.y);
+    }
+    expect(await page.evaluate(() => isPolygonClosed)).toBe(false);
+    const second = await canvasPointFor(page, 3, 0);
+    await page.mouse.click(second.x, second.y);
+    expect(await readTable(page)).toHaveLength(3);
+
+    const first = await canvasPointFor(page, 0, 0);
+    await page.mouse.click(first.x, first.y);
+    expect(await page.evaluate(() => isPolygonClosed)).toBe(true);
+    expect(await readTable(page)).toHaveLength(3);
+});
+
+test('nilai cepat dan pilihan garis refleksi memperbarui parameter dan warna aksen', async ({ page }) => {
+    await expect(page.locator('body')).toHaveAttribute('data-transform', 'reflection');
+    await page.locator('.axis-option:has(input[value="y=x"])').click();
+    await expect(page.locator('#reflectionAxis')).toHaveValue('y=x');
+    await expect(page.locator('.axis-option:has(input[value="y=x"])')).toHaveClass(/is-selected/);
+    await expect(status(page)).toHaveText('Refleksi terhadap garis y = x');
+
+    await page.locator('#tab-rotation').click();
+    await expect(page.locator('body')).toHaveAttribute('data-transform', 'rotation');
+    await page.locator('.quick-value[data-value="180"]').click();
+    await expect(page.locator('#rotationAngleValue')).toHaveText('180°');
+    await expect(page.locator('.quick-value[data-value="180"]')).toHaveAttribute('aria-pressed', 'true');
+
+    await page.locator('#tab-dilation').click();
+    await page.locator('.quick-value[data-value="0.5"]').click();
+    await expect(status(page)).toHaveText('Dilatasi faktor 0.5 dengan pusat (0, 0)');
+});
+
+test('latihan refleksi: lihat di kanvas memilih garis yang benar', async ({ page }) => {
+    // Paksa soal refleksi agar alurnya teruji.
+    await page.evaluate(() => {
+        practice.question = {
+            point: { x: 3, y: 1 }, type: 'reflection',
+            params: { axis: 'y=k', m: 1, c: 0, k: 2 },
+            answer: { x: 3, y: 3 }, text: 'Tentukan bayangan titik A(3, 1) oleh refleksi terhadap garis y = 2.'
+        };
+    });
+    await page.locator('#practiceShow').click();
+    await expect(page.locator('.axis-option:has(input[value="y=k"])')).toHaveClass(/is-selected/);
+    expect(await readTable(page)).toEqual([['P1', '(3, 1)', '(3, 3)']]);
 });

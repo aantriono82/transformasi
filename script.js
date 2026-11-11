@@ -70,6 +70,13 @@ const COLORS = {
     axis: '#333',
     highlight: '#f43f5e'
 };
+// Warna garis bantu di kanvas (sama dengan --accent-strong di CSS).
+const TRANSFORM_COLORS = {
+    reflection: '#9333ea',
+    rotation: '#16a34a',
+    dilation: '#db2777',
+    translation: '#0891b2'
+};
 const transformNames = {
     reflection: 'refleksi',
     rotation: 'rotasi',
@@ -144,6 +151,7 @@ function setActiveTab(tab, { focus = false, updateHash = true, record = true, ke
     if (focus) tab.focus();
 
     currentTransform = tab.dataset.transform;
+    document.body.dataset.transform = currentTransform;
     showTransformParams(currentTransform);
     updateTransformStatus();
 
@@ -288,6 +296,22 @@ function setupEventListeners() {
     addManualPointButton.addEventListener('click', addManualPoint);
     manualPointInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addManualPoint();
+    });
+
+    // Pilihan garis refleksi bergambar mengisi <select> tersembunyi.
+    document.querySelectorAll('input[name="reflectionAxisChoice"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            $('reflectionAxis').value = radio.value;
+            handleParamChange();
+        });
+        radio.addEventListener('focus', () => radio.closest('.axis-option').classList.add('has-focus'));
+        radio.addEventListener('blur', () => radio.closest('.axis-option').classList.remove('has-focus'));
+    });
+    document.querySelectorAll('.quick-value').forEach(button => {
+        button.addEventListener('click', () => {
+            $(button.dataset.target).value = button.dataset.value;
+            handleParamChange();
+        });
     });
 
     // Setiap perubahan parameter memperbarui label status dan pratinjau garis/pusat.
@@ -572,6 +596,8 @@ const TAP_TOLERANCE = 6; // piksel
 let pointerPanStart = null;
 let pointerPinchStart = null;
 let tapCandidate = null;
+// Titik asli atau pusat transformasi yang sedang diseret.
+let dragState = null;
 
 function pointerPosition(event) {
     const rect = canvas.getBoundingClientRect();
@@ -604,15 +630,112 @@ function handlePointerDown(event) {
     activePointers.set(event.pointerId, position);
     canvas.setPointerCapture(event.pointerId);
 
+    const primary = event.pointerType !== 'mouse' || event.button === 0;
     if (activePointers.size === 1) {
+        const target = primary ? dragTargetAt(position) : null;
+        if (target) {
+            startDrag(target, event.pointerId, position);
+            return;
+        }
         startPan(position);
         // Hanya klik kiri / ketukan satu jari yang menambah titik.
-        tapCandidate = (event.pointerType !== 'mouse' || event.button === 0)
-            ? { id: event.pointerId, x: position.x, y: position.y }
-            : null;
+        tapCandidate = primary ? { id: event.pointerId, x: position.x, y: position.y } : null;
     } else if (activePointers.size === 2) {
+        // Jari kedua mengubah seret menjadi pinch zoom.
+        if (dragState) finishDrag();
         tapCandidate = null;
         startPinch();
+    }
+}
+
+// ==================== SERET TITIK DAN PUSAT ====================
+
+const DRAG_RADIUS = 14; // piksel; sedikit lebih longgar dari radius sorot
+
+function centerInputIds() {
+    if (currentTransform === 'rotation') return ['rotationCenterX', 'rotationCenterY'];
+    if (currentTransform === 'dilation') return ['dilationCenterX', 'dilationCenterY'];
+    return null;
+}
+
+// Yang bisa diseret: titik asli (diutamakan) dan pusat rotasi/dilatasi.
+function dragTargetAt(position) {
+    const distanceTo = (world) => {
+        const screen = worldToScreen(world.x, world.y);
+        return Math.hypot(screen.x - position.x, screen.y - position.y);
+    };
+    let best = null;
+    let bestDistance = DRAG_RADIUS;
+    points.forEach((point, index) => {
+        const distance = distanceTo(point);
+        if (distance <= bestDistance) {
+            bestDistance = distance;
+            best = { kind: 'point', index };
+        }
+    });
+    if (best) return best;
+    const ids = centerInputIds();
+    if (ids && distanceTo({ x: numberValue(ids[0]), y: numberValue(ids[1]) }) <= DRAG_RADIUS) {
+        return { kind: 'center' };
+    }
+    return null;
+}
+
+function snapToGrid(world) {
+    const snap = viewScale >= 60 ? 0.5 : 1;
+    return { x: Math.round(world.x / snap) * snap + 0, y: Math.round(world.y / snap) * snap + 0 };
+}
+
+function startDrag(target, pointerId, position) {
+    stopAnimation();
+    dragState = { target, pointerId, start: position, moved: false, changed: false };
+    tapCandidate = null;
+    pointerPanStart = null;
+    if (target.kind === 'point') setHovered(target.index);
+}
+
+function moveDrag(position) {
+    if (!dragState.moved) {
+        if (Math.hypot(position.x - dragState.start.x, position.y - dragState.start.y) < TAP_TOLERANCE) return;
+        dragState.moved = true;
+        canvas.style.cursor = 'grabbing';
+    }
+    const world = snapToGrid(screenToWorld(position.x, position.y));
+    const { target } = dragState;
+
+    if (target.kind === 'point') {
+        const current = points[target.index];
+        if (current.x === world.x && current.y === world.y) return;
+        points[target.index] = world;
+        // Bayangan yang sudah diterapkan ikut bergerak bersama titik aslinya.
+        if (resultMeta && resultMeta.params && transformedPoints.length === points.length) {
+            transformedPoints = GeometryTransformations.apply(points, resultMeta.transform, resultMeta.params);
+        }
+        dragState.changed = true;
+        updateCoordinateTable();
+        redrawCanvas();
+    } else {
+        const [idX, idY] = centerInputIds();
+        if (numberValue(idX) === world.x && numberValue(idY) === world.y) return;
+        $(idX).value = String(world.x);
+        $(idY).value = String(world.y);
+        dragState.changed = true;
+        handleParamChange();
+    }
+}
+
+function finishDrag() {
+    const { target, changed } = dragState;
+    dragState = null;
+    canvas.style.cursor = '';
+    if (!changed) return;
+    if (target.kind === 'point') {
+        saveHistory();
+        const p = points[target.index];
+        showMessage(`Titik P${target.index + 1} dipindah ke (${formatCoordinate(p.x)}, ${formatCoordinate(p.y)})`, 'success');
+    } else {
+        const params = getTransformParams(currentTransform);
+        showMessage(`Pusat ${transformNames[currentTransform]} dipindah ke (${formatCoordinate(params.centerX)}, ${formatCoordinate(params.centerY)})`, 'success');
     }
 }
 
@@ -644,12 +767,21 @@ function pointIndexAt(position) {
 
 function handlePointerMove(event) {
     if (!activePointers.has(event.pointerId)) {
-        if (event.pointerType === 'mouse') setHovered(pointIndexAt(pointerPosition(event)));
+        if (event.pointerType === 'mouse') {
+            const position = pointerPosition(event);
+            setHovered(pointIndexAt(position));
+            canvas.style.cursor = dragTargetAt(position) ? 'grab' : '';
+        }
         return;
     }
     event.preventDefault();
     const position = pointerPosition(event);
     activePointers.set(event.pointerId, position);
+
+    if (dragState && dragState.pointerId === event.pointerId) {
+        moveDrag(position);
+        return;
+    }
 
     if (activePointers.size === 2 && pointerPinchStart) {
         const [first, second] = [...activePointers.values()];
@@ -676,6 +808,19 @@ function handlePointerMove(event) {
 
 function endPointer(event, allowTap) {
     if (!activePointers.has(event.pointerId)) return;
+
+    if (dragState && dragState.pointerId === event.pointerId) {
+        activePointers.delete(event.pointerId);
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+        const { target, moved } = dragState;
+        finishDrag();
+        // Ketukan pada P1 menutup poligon (bila belum tertutup).
+        if (allowTap && !moved && target.kind === 'point' && target.index === 0
+            && points.length >= 3 && !isPolygonClosed) {
+            closePolygon();
+        }
+        return;
+    }
     const wasTap = allowTap && tapCandidate && tapCandidate.id === event.pointerId && activePointers.size === 1;
     activePointers.delete(event.pointerId);
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
@@ -901,9 +1046,14 @@ function drawCenterMarker(center, label) {
     const p = worldToScreen(center.x, center.y);
     ctx.setLineDash([]);
     ctx.lineWidth = 2;
+    // Isi putih menandakan pusat bisa diseret.
+    const fill = ctx.fillStyle;
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
+    ctx.fillStyle = fill;
     ctx.beginPath();
     ctx.moveTo(p.x - 11, p.y);
     ctx.lineTo(p.x + 11, p.y);
@@ -914,6 +1064,33 @@ function drawCenterMarker(center, label) {
     ctx.font = `bold 12px ${CANVAS_FONT}`;
     ctx.textAlign = 'right';
     ctx.fillText(`${label}(${formatCoordinate(center.x)}, ${formatCoordinate(center.y)})`, p.x - 12, p.y + 18);
+}
+
+// Busur lintasan titik saat dirotasi, dengan panah di ujungnya. Sumbu Y layar
+// terbalik, jadi sudut positif (berlawanan jarum jam) digambar anticlockwise.
+function drawRotationArc(center, point, angle) {
+    const c = worldToScreen(center.x, center.y);
+    const p = worldToScreen(point.x, point.y);
+    const radius = Math.hypot(p.x - c.x, p.y - c.y);
+    if (radius < 4 || angle === 0) return;
+    const start = Math.atan2(p.y - c.y, p.x - c.x);
+    const end = start - angle * Math.PI / 180;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, radius, start, end, angle > 0);
+    ctx.stroke();
+
+    // Panah searah gerakan di ujung busur.
+    const tangent = end + (angle > 0 ? -Math.PI / 2 : Math.PI / 2);
+    const tip = { x: c.x + radius * Math.cos(end), y: c.y + radius * Math.sin(end) };
+    const dash = ctx.getLineDash();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(tip.x, tip.y);
+    ctx.lineTo(tip.x - 9 * Math.cos(tangent - 0.45), tip.y - 9 * Math.sin(tangent - 0.45));
+    ctx.lineTo(tip.x - 9 * Math.cos(tangent + 0.45), tip.y - 9 * Math.sin(tangent + 0.45));
+    ctx.closePath();
+    ctx.fill();
+    ctx.setLineDash(dash);
 }
 
 // Garis cermin sebagai dua titik dunia jauh di luar layar.
@@ -933,8 +1110,9 @@ function getMirrorLine(params) {
 function drawHelpers() {
     const params = getTransformParams(currentTransform);
     ctx.save();
-    ctx.strokeStyle = COLORS.helper;
-    ctx.fillStyle = COLORS.helper;
+    const helperColor = TRANSFORM_COLORS[currentTransform] || COLORS.helper;
+    ctx.strokeStyle = helperColor;
+    ctx.fillStyle = helperColor;
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 6]);
 
@@ -953,7 +1131,9 @@ function drawHelpers() {
         ctx.setLineDash([4, 4]);
         points.forEach((p, i) => {
             const image = transformedPoints[i];
-            if (resultMeta.center) {
+            if (resultMeta.transform === 'rotation' && resultMeta.params) {
+                drawRotationArc(resultMeta.center, p, resultMeta.params.angle);
+            } else if (resultMeta.center) {
                 drawDashedSegment(resultMeta.center, p);
                 drawDashedSegment(resultMeta.center, image);
             } else {
@@ -1083,6 +1263,16 @@ function syncParamDisplays() {
     $('reflectionCValue').textContent = formatCoordinate(numberValue('reflectionC'));
     $('rotationAngleValue').textContent = `${formatCoordinate(numberValue('rotationAngle'))}°`;
     $('scaleFactorValue').textContent = formatCoordinate(numberValue('scaleFactor', 1));
+
+    document.querySelectorAll('input[name="reflectionAxisChoice"]').forEach(radio => {
+        radio.checked = radio.value === axis;
+        radio.closest('.axis-option').classList.toggle('is-selected', radio.checked);
+    });
+    document.querySelectorAll('.quick-value').forEach(button => {
+        const selected = numberValue(button.dataset.target) === Number(button.dataset.value);
+        button.classList.toggle('is-selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+    });
 }
 
 function computeTransform(type, params) {
@@ -1179,10 +1369,12 @@ function setSheetExpanded(expanded) {
 
 // Di layar kecil, pastikan kanvas terlihat agar animasi hasil tidak terlewat.
 function revealCanvas() {
-    const rect = canvas.getBoundingClientRect();
+    // Seluruh kotak kanvas (termasuk label status di atasnya) harus terlihat.
+    const shell = canvas.closest('.canvas-shell') || canvas;
+    const rect = shell.getBoundingClientRect();
     const sheetTop = smallScreen.matches ? controlPanel.getBoundingClientRect().top : window.innerHeight;
     if (rect.top >= 0 && rect.bottom <= sheetTop) return;
-    canvas.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    shell.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
 }
 
 function createCell(text, extraClass = '') {
