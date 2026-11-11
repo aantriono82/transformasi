@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Aplikasi Geometri Transformasi</title>
     
+    <!-- Tema tersimpan, atau ikuti preferensi sistem. Dipasang sebelum CSS dirender. -->
+    <script>
+        (function () {
+            var theme = 'dark';
+            try {
+                theme = localStorage.getItem('theme')
+                    || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            } catch (error) { /* localStorage tidak tersedia */ }
+            document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+        }());
+    </script>
+
     <!-- CSS dibangun lokal melalui npm run build:css -->
     <link rel="stylesheet" href="assets/fontawesome.min.css">
     <link rel="stylesheet" href="assets/app.css">
@@ -111,6 +123,9 @@
                 <h1 class="app-header-title">Aplikasi Geometri Transformasi</h1>
                 <p class="app-header-subtitle">Visualisasi interaktif refleksi, rotasi, dilatasi, dan translasi</p>
             </div>
+            <button id="themeToggle" type="button" class="app-header-help" aria-label="Ganti ke tema terang" title="Ganti tema">
+                <i class="fas fa-sun" aria-hidden="true"></i>
+            </button>
             <button id="helpBtn" type="button" class="app-header-help" aria-label="Petunjuk penggunaan">
                 <i class="fas fa-question-circle" aria-hidden="true"></i>
                 <span class="hidden sm:inline">Petunjuk</span>
@@ -190,6 +205,10 @@
                             <dd><code id="formulaSpecific"></code></dd>
                         </div>
                         <div class="formula-row">
+                            <dt>Matriks</dt>
+                            <dd id="formulaMatrix" class="formula-matrix"></dd>
+                        </div>
+                        <div class="formula-row">
                             <dt>Contoh</dt>
                             <dd id="formulaExample"></dd>
                         </div>
@@ -225,7 +244,7 @@
                         <i class="fas fa-table text-secondary-500 mr-2 sm:mr-3"></i> Koordinat Titik
                     </h3>
                     
-                    <div class="bg-primary-800/40 rounded-lg md:rounded-xl p-3 sm:p-4 border border-primary-500/30">
+                    <div class="table-card bg-primary-800/40 rounded-lg md:rounded-xl p-3 sm:p-4 border border-primary-500/30">
                         <div class="overflow-x-auto -mx-2 sm:mx-0">
                             <div class="min-w-[300px]">
                                 <table id="coordinateTable" class="w-full text-white text-sm sm:text-base">
@@ -349,17 +368,17 @@
                         <div id="customReflectionParams" class="space-y-4 sm:space-y-6 hidden">
                             <div>
                                 <label for="reflectionM" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Kemiringan (m):</label>
-                                <div class="flex items-center gap-2 sm:gap-4">
-                                    <input type="range" id="reflectionM" min="-5" max="5" step="0.1" value="1" class="flex-1">
-                                    <span id="reflectionMValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">1</span>
+                                <div class="range-wrap">
+                                    <input type="range" id="reflectionM" min="-5" max="5" step="0.1" value="1" class="range-input">
+                                    <span id="reflectionMValue" class="range-bubble" aria-hidden="true">1</span>
                                 </div>
                             </div>
                             
                             <div>
                                 <label for="reflectionC" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Konstanta (c):</label>
-                                <div class="flex items-center gap-2 sm:gap-4">
-                                    <input type="range" id="reflectionC" min="-20" max="20" step="0.5" value="0" class="flex-1">
-                                    <span id="reflectionCValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">0</span>
+                                <div class="range-wrap">
+                                    <input type="range" id="reflectionC" min="-20" max="20" step="0.5" value="0" class="range-input">
+                                    <span id="reflectionCValue" class="range-bubble" aria-hidden="true">0</span>
                                 </div>
                             </div>
                         </div>
@@ -371,10 +390,10 @@
                         
                         <div>
                             <label for="rotationAngle" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Sudut Rotasi (derajat, negatif = searah jarum jam):</label>
-                            <div class="flex items-center gap-2 sm:gap-4">
-                                <input type="range" id="rotationAngle" min="-360" max="360" step="1" value="90" class="flex-1">
-                                <span id="rotationAngleValue" class="text-white font-bold min-w-12 sm:min-w-16 text-center text-sm sm:text-base">90°</span>
-                            </div>
+                            <div class="range-wrap">
+                                    <input type="range" id="rotationAngle" min="-360" max="360" step="1" value="90" class="range-input">
+                                    <span id="rotationAngleValue" class="range-bubble" aria-hidden="true">90°</span>
+                                </div>
                             <div class="quick-values" role="group" aria-label="Sudut cepat">
                                 <button type="button" class="quick-value" data-target="rotationAngle" data-value="90">90°</button>
                                 <button type="button" class="quick-value" data-target="rotationAngle" data-value="180">180°</button>
@@ -404,10 +423,10 @@
                         
                         <div>
                             <label for="scaleFactor" class="block text-blue-100 font-medium mb-1 sm:mb-2 text-sm sm:text-base">Faktor Skala (k, negatif = bayangan berlawanan arah):</label>
-                            <div class="flex items-center gap-2 sm:gap-4">
-                                <input type="range" id="scaleFactor" min="-5" max="5" step="0.1" value="2" class="flex-1">
-                                <span id="scaleFactorValue" class="text-white font-bold min-w-10 sm:min-w-12 text-center text-sm sm:text-base">2</span>
-                            </div>
+                            <div class="range-wrap">
+                                    <input type="range" id="scaleFactor" min="-5" max="5" step="0.1" value="2" class="range-input">
+                                    <span id="scaleFactorValue" class="range-bubble" aria-hidden="true">2</span>
+                                </div>
                             <div class="quick-values" role="group" aria-label="Faktor cepat">
                                 <button type="button" class="quick-value" data-target="scaleFactor" data-value="2">k = 2</button>
                                 <button type="button" class="quick-value" data-target="scaleFactor" data-value="3">k = 3</button>

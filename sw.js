@@ -1,6 +1,6 @@
 /* Service worker: aplikasi tetap bisa dipakai tanpa koneksi internet.
  * VERSION dan PRECACHE ditulis otomatis oleh `npm run build:sw`. */
-const VERSION = '43f3816e1e38';
+const VERSION = '90f1f34ba9d1';
 const PRECACHE = [
     './',
     'index.html',

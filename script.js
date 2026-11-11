@@ -1,7 +1,7 @@
 // ==================== DEKLARASI ELEMEN DOM ====================
 const {
     parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, createHistory, placeLabels,
-    affineCoefficients, formatAffineRule, generalRule, createQuestion, checkAnswer
+    affineCoefficients, formatAffineRule, affineMatrix, generalRule, createQuestion, checkAnswer
 } = AppUtils;
 
 const canvas = document.getElementById('transformCanvas');
@@ -32,6 +32,7 @@ const formulaEls = {
     general: $('formulaGeneral'),
     note: $('formulaNote'),
     specific: $('formulaSpecific'),
+    matrix: $('formulaMatrix'),
     example: $('formulaExample')
 };
 
@@ -63,20 +64,41 @@ let canvasWidth = 0;
 let canvasHeight = 0;
 
 const CANVAS_FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
-const COLORS = {
-    original: '#2196f3',
-    result: '#ff9800',
-    helper: '#9333ea',
-    axis: '#333',
-    highlight: '#f43f5e'
+// Palet kanvas per tema. Warna garis bantu per transformasi sama dengan
+// --accent-strong (tema terang) dan --accent (tema gelap) di CSS.
+const CANVAS_THEMES = {
+    light: {
+        background: '#f8fafc',
+        gridMinor: 'rgba(200, 200, 200, 0.4)',
+        gridMajor: 'rgba(160, 160, 160, 0.6)',
+        axis: '#333333',
+        labelBackground: 'rgba(248, 250, 252, 0.85)',
+        original: '#2196f3',
+        result: '#ff9800',
+        highlight: '#f43f5e',
+        helpers: { reflection: '#9333ea', rotation: '#16a34a', dilation: '#db2777', translation: '#0891b2' }
+    },
+    dark: {
+        background: '#0b1324',
+        gridMinor: 'rgba(148, 163, 184, 0.12)',
+        gridMajor: 'rgba(148, 163, 184, 0.3)',
+        axis: '#cbd5e1',
+        labelBackground: 'rgba(15, 23, 42, 0.85)',
+        original: '#60a5fa',
+        result: '#fbbf24',
+        highlight: '#fb7185',
+        helpers: { reflection: '#c084fc', rotation: '#4ade80', dilation: '#f472b6', translation: '#22d3ee' }
+    }
 };
-// Warna garis bantu di kanvas (sama dengan --accent-strong di CSS).
-const TRANSFORM_COLORS = {
-    reflection: '#9333ea',
-    rotation: '#16a34a',
-    dilation: '#db2777',
-    translation: '#0891b2'
-};
+
+function currentTheme() {
+    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+}
+
+function palette() {
+    return CANVAS_THEMES[currentTheme()];
+}
+
 const transformNames = {
     reflection: 'refleksi',
     rotation: 'rotasi',
@@ -118,6 +140,7 @@ function init() {
     syncParamDisplays();
     initShareButtons();
     initPractice();
+    initTheme();
     initBackToTop();
     registerServiceWorker();
 
@@ -405,12 +428,12 @@ function redo() {
 
 function exportCanvasImage() {
     drawNow();
-    // Gabungkan dengan latar putih agar PNG terbaca di penampil bertema gelap.
+    // Gabungkan dengan latar kanvas agar PNG tidak transparan di penampil mana pun.
     const output = document.createElement('canvas');
     output.width = canvas.width;
     output.height = canvas.height;
     const outputCtx = output.getContext('2d');
-    outputCtx.fillStyle = '#ffffff';
+    outputCtx.fillStyle = palette().background;
     outputCtx.fillRect(0, 0, output.width, output.height);
     outputCtx.drawImage(canvas, 0, 0);
 
@@ -432,7 +455,8 @@ function exportCanvasImage() {
 // ==================== CANVAS DAN GRID ====================
 
 function drawGridAndAxes() {
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillStyle = palette().background;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     const gridStep = niceStep(viewScale, 12);
     const majorStep = gridStep * 5;
@@ -448,7 +472,7 @@ function drawGridAndAxes() {
         for (let value = start; value <= to; value += gridStep) {
             if (Math.abs(value) < 1e-9) continue;
             const isMajor = Math.abs(value % majorStep) < 1e-9;
-            ctx.strokeStyle = isMajor ? 'rgba(160, 160, 160, 0.6)' : 'rgba(200, 200, 200, 0.4)';
+            ctx.strokeStyle = isMajor ? palette().gridMajor : palette().gridMinor;
             ctx.lineWidth = isMajor ? 1 : 0.5;
             const pos = isVertical ? worldToScreen(value, 0).x : worldToScreen(0, value).y;
             ctx.beginPath();
@@ -467,8 +491,8 @@ function drawGridAndAxes() {
 
     // Sumbu X dan Y
     const origin = worldToScreen(0, 0);
-    ctx.strokeStyle = COLORS.axis;
-    ctx.fillStyle = COLORS.axis;
+    ctx.strokeStyle = palette().axis;
+    ctx.fillStyle = palette().axis;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, origin.y);
@@ -965,7 +989,7 @@ function drawShape(shapePoints, color, { preview = false } = {}) {
 function drawHighlight(resultPoints) {
     if (hoveredIndex === null) return;
     ctx.save();
-    ctx.strokeStyle = COLORS.highlight;
+    ctx.strokeStyle = palette().highlight;
     ctx.lineWidth = 2.5;
     [points[hoveredIndex], resultPoints[hoveredIndex]].forEach(point => {
         if (!point) return;
@@ -1000,8 +1024,8 @@ function drawPointLabels(resultPoints) {
             height: LABEL_FONT_SIZE + LABEL_PADDING * 2
         };
     });
-    const labels = makeLabels(points, 'P', COLORS.original, 'above')
-        .concat(makeLabels(resultPoints, "P'", COLORS.result, 'below'));
+    const labels = makeLabels(points, 'P', palette().original, 'above')
+        .concat(makeLabels(resultPoints, "P'", palette().result, 'below'));
     if (!labels.length) return;
 
     const positions = placeLabels(labels, {
@@ -1012,7 +1036,7 @@ function drawPointLabels(resultPoints) {
     ctx.textBaseline = 'top';
     labels.forEach((label, i) => {
         const { x, y } = positions[i];
-        ctx.fillStyle = 'rgba(248, 250, 252, 0.85)';
+        ctx.fillStyle = palette().labelBackground;
         ctx.fillRect(x, y, label.width, label.height);
         ctx.fillStyle = label.color;
         ctx.fillText(label.text, x + LABEL_PADDING, y + LABEL_PADDING);
@@ -1048,7 +1072,7 @@ function drawCenterMarker(center, label) {
     ctx.lineWidth = 2;
     // Isi putih menandakan pusat bisa diseret.
     const fill = ctx.fillStyle;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = palette().background;
     ctx.beginPath();
     ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
     ctx.fill();
@@ -1110,7 +1134,7 @@ function getMirrorLine(params) {
 function drawHelpers() {
     const params = getTransformParams(currentTransform);
     ctx.save();
-    const helperColor = TRANSFORM_COLORS[currentTransform] || COLORS.helper;
+    const helperColor = palette().helpers[currentTransform];
     ctx.strokeStyle = helperColor;
     ctx.fillStyle = helperColor;
     ctx.lineWidth = 2;
@@ -1203,10 +1227,10 @@ function drawNow() {
     drawGridAndAxes();
     drawHelpers();
     const preview = previewPoints();
-    if (preview) drawShape(preview, COLORS.result, { preview: true });
-    drawShape(points, COLORS.original);
+    if (preview) drawShape(preview, palette().result, { preview: true });
+    drawShape(points, palette().original);
     const resultPoints = animation ? animationPoints() : transformedPoints;
-    drawShape(resultPoints, COLORS.result);
+    drawShape(resultPoints, palette().result);
     drawHighlight(resultPoints);
     drawPointLabels(animation ? [] : transformedPoints);
 }
@@ -1263,6 +1287,7 @@ function syncParamDisplays() {
     $('reflectionCValue').textContent = formatCoordinate(numberValue('reflectionC'));
     $('rotationAngleValue').textContent = `${formatCoordinate(numberValue('rotationAngle'))}°`;
     $('scaleFactorValue').textContent = formatCoordinate(numberValue('scaleFactor', 1));
+    document.querySelectorAll('.range-input').forEach(positionRangeBubble);
 
     document.querySelectorAll('input[name="reflectionAxisChoice"]').forEach(radio => {
         radio.checked = radio.value === axis;
@@ -1273,6 +1298,16 @@ function syncParamDisplays() {
         button.classList.toggle('is-selected', selected);
         button.setAttribute('aria-pressed', String(selected));
     });
+}
+
+// Letakkan gelembung nilai tepat di atas pegangan slider (lebar pegangan ±16px).
+function positionRangeBubble(input) {
+    const bubble = input.parentElement.querySelector('.range-bubble');
+    if (!bubble) return;
+    const min = Number(input.min);
+    const max = Number(input.max);
+    const ratio = max > min ? (Number(input.value) - min) / (max - min) : 0;
+    bubble.style.left = `calc(${ratio * 100}% + ${(0.5 - ratio) * 16}px)`;
 }
 
 function computeTransform(type, params) {
@@ -1411,6 +1446,42 @@ function updateCoordinateTable() {
 
 // ==================== KARTU RUMUS ====================
 
+function matrixElement(rows) {
+    const element = document.createElement('span');
+    element.className = 'matrix';
+    element.style.gridTemplateColumns = `repeat(${rows[0].length}, auto)`;
+    rows.flat().forEach(value => {
+        const cell = document.createElement('span');
+        cell.textContent = typeof value === 'number' ? formatCoordinate(value) : value;
+        element.appendChild(cell);
+    });
+    return element;
+}
+
+// (x', y') = M·(x, y) + t, disusun sebagai matriks kolom agar mudah dibaca.
+function renderMatrix(container, form) {
+    container.replaceChildren();
+    if (!form) {
+        container.textContent = '-';
+        return;
+    }
+    const symbol = (text) => {
+        const span = document.createElement('span');
+        span.className = 'matrix-symbol';
+        span.textContent = text;
+        return span;
+    };
+    container.append(
+        matrixElement([["x'"], ["y'"]]),
+        symbol(form.exact ? '=' : '≈'),
+        matrixElement(form.matrix),
+        matrixElement([['x'], ['y']])
+    );
+    if (form.translation) {
+        container.append(symbol('+'), matrixElement([[form.translation[0]], [form.translation[1]]]));
+    }
+}
+
 function updateFormula() {
     const params = getTransformParams(currentTransform);
     const general = generalRule(currentTransform, params);
@@ -1419,9 +1490,9 @@ function updateFormula() {
     formulaEls.note.textContent = general.note;
 
     const invalid = currentTransform === 'dilation' && params.factor === 0;
-    formulaEls.specific.textContent = invalid
-        ? 'Faktor k tidak boleh 0'
-        : formatAffineRule(affineCoefficients(p => GeometryTransformations.apply([p], currentTransform, params)[0]));
+    const coefficients = affineCoefficients(p => GeometryTransformations.apply([p], currentTransform, params)[0]);
+    formulaEls.specific.textContent = invalid ? 'Faktor k tidak boleh 0' : formatAffineRule(coefficients);
+    renderMatrix(formulaEls.matrix, invalid ? null : affineMatrix(coefficients));
 
     const example = formulaEls.example;
     example.replaceChildren();
@@ -1441,6 +1512,48 @@ function updateFormula() {
     result.className = 'formula-example-result';
     result.textContent = format("P'1", image);
     example.append(original, ' → ', result);
+}
+
+// ==================== TEMA TERANG/GELAP ====================
+
+const themeToggle = $('themeToggle');
+
+function applyTheme(theme, { persist = false } = {}) {
+    document.documentElement.dataset.theme = theme;
+    const next = theme === 'light' ? 'gelap' : 'terang';
+    themeToggle.setAttribute('aria-label', `Ganti ke tema ${next}`);
+    themeToggle.querySelector('i').className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#f1f5f9' : '#0b1120');
+    if (persist) {
+        try {
+            localStorage.setItem('theme', theme);
+        } catch {
+            // Penyimpanan tidak tersedia (mis. mode privat); tema tetap berlaku sampai halaman ditutup.
+        }
+    }
+    drawNow();
+}
+
+function storedTheme() {
+    try {
+        return localStorage.getItem('theme');
+    } catch {
+        return null;
+    }
+}
+
+function initTheme() {
+    applyTheme(currentTheme());
+    themeToggle.addEventListener('click', () => {
+        applyTheme(currentTheme() === 'light' ? 'dark' : 'light', { persist: true });
+        showMessage(`Tema ${currentTheme() === 'light' ? 'terang' : 'gelap'} aktif`, 'success');
+    });
+    // Ikuti perubahan tema sistem selama pengguna belum memilih sendiri.
+    const query = window.matchMedia('(prefers-color-scheme: light)');
+    query.addEventListener('change', (event) => {
+        if (!storedTheme()) applyTheme(event.matches ? 'light' : 'dark');
+    });
 }
 
 // ==================== LATIHAN ====================
