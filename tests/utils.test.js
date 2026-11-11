@@ -238,3 +238,55 @@ test('affineMatrix memberi matriks dan vektor translasi', () => {
     assert.equal(r30.exact, false);
     assert.deepEqual(r30.matrix, [[0.87, -0.5], [0.5, 0.87]]);
 });
+
+test('encodeState/decodeState: bolak-balik untuk keempat transformasi', () => {
+    const { encodeState, decodeState } = require('../utils.js');
+    const points = [{ x: -3, y: 2 }, { x: 0, y: 5.5 }, { x: 3, y: 2 }];
+    const cases = [
+        ['reflection', { axis: 'y=-x', m: 1, c: 0, k: 0 }],
+        ['reflection', { axis: 'y=k', m: 1, c: 0, k: -1.5 }],
+        ['reflection', { axis: 'custom', m: 0.5, c: 2, k: 0 }],
+        ['rotation', { angle: -90, centerX: 1, centerY: -2 }],
+        ['dilation', { factor: 0.5, centerX: 0, centerY: 3 }],
+        ['translation', { tx: 4, ty: -3 }]
+    ];
+    for (const [transform, params] of cases) {
+        const query = encodeState({ points, closed: true, transform, params, applied: true, steps: [] });
+        assert.deepEqual(decodeState('?' + query, transform), {
+            points, closed: true, transform, params, applied: true, steps: []
+        }, transform);
+    }
+});
+
+test('encodeState: format mudah dibaca dan langkah komposisi ikut tersimpan', () => {
+    const { encodeState, decodeState } = require('../utils.js');
+    const steps = [
+        { transform: 'reflection', params: { axis: 'x', m: 1, c: 0, k: 0 } },
+        { transform: 'rotation', params: { angle: 90, centerX: 0, centerY: 0 } }
+    ];
+    const query = encodeState({
+        points: [{ x: 1, y: 2 }], closed: false, transform: 'translation',
+        params: { tx: 4, ty: 3 }, applied: false, steps
+    });
+    assert.equal(query, 'titik=1,2&langkah=refleksi:garis=x~rotasi:sudut=90:pusat=0,0&vektor=4,3');
+    const state = decodeState(query, 'translation');
+    assert.deepEqual(state.steps, steps);
+    assert.equal(state.applied, false);
+    assert.equal(encodeState({ points: [], closed: false, transform: 'rotation', params: {}, steps: [] }), '');
+});
+
+test('decodeState menolak atau mengabaikan data tidak valid', () => {
+    const { decodeState } = require('../utils.js');
+    assert.equal(decodeState('', 'rotation'), null);
+    assert.equal(decodeState('?titik=1,2;abc', 'rotation'), null);
+    assert.equal(decodeState('?titik=1e9,2', 'rotation'), null);
+    assert.equal(decodeState('?titik=1,2&langkah=terbang:x=1', 'rotation'), null);
+    // Parameter salah: titik tetap dimuat, tetapi tanpa hasil.
+    const state = decodeState('?titik=1,2&faktor=0&pusat=0,0&hasil=1', 'dilation');
+    assert.equal(state.params, null);
+    assert.equal(state.applied, false);
+    // "tutup" diabaikan bila titik kurang dari 3.
+    assert.equal(decodeState('?titik=1,2&tutup=1', 'rotation').closed, false);
+    const many = Array.from({ length: 101 }, (_, i) => `${i},0`).join(';');
+    assert.equal(decodeState(`?titik=${many}`, 'rotation'), null);
+});

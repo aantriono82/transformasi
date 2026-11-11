@@ -298,6 +298,145 @@
         return { valid: true, correct: close(parsed.x, question.answer.x) && close(parsed.y, question.answer.y) };
     }
 
+    // ==================== KEADAAN DI URL ====================
+    // Format mudah dibaca, mis. ?titik=-3,2;0,5;3,2&tutup=1&sudut=90&pusat=0,0&hasil=1
+    // Jenis transformasi aktif tetap dibawa oleh hash (#rotasi).
+
+    const STEP_NAMES = { reflection: 'refleksi', rotation: 'rotasi', dilation: 'dilatasi', translation: 'translasi' };
+    const AXES = ['x', 'y', 'y=x', 'y=-x', 'x=h', 'y=k', 'custom'];
+    const MAX_URL_POINTS = 100;
+    const MAX_URL_STEPS = 20;
+    const MAX_URL_VALUE = 1000;
+
+    const num = (value) => formatCoordinate(value);
+    const pair = (x, y) => `${num(x)},${num(y)}`;
+
+    function readNumber(text) {
+        if (text === null || text === undefined || text.trim() === '') return null;
+        const value = Number(text);
+        return Number.isFinite(value) && Math.abs(value) <= MAX_URL_VALUE ? value : null;
+    }
+
+    function readPair(text) {
+        const parts = String(text ?? '').split(',');
+        if (parts.length !== 2) return null;
+        const x = readNumber(parts[0]);
+        const y = readNumber(parts[1]);
+        return x === null || y === null ? null : { x, y };
+    }
+
+    /** Parameter satu jenis transformasi sebagai pasangan kunci-nilai URL. */
+    function paramsToEntries(type, params) {
+        switch (type) {
+            case 'reflection': {
+                const entries = [['garis', params.axis]];
+                if (params.axis === 'x=h' || params.axis === 'y=k') entries.push(['nilai', num(params.k)]);
+                if (params.axis === 'custom') entries.push(['m', num(params.m)], ['c', num(params.c)]);
+                return entries;
+            }
+            case 'rotation': return [['sudut', num(params.angle)], ['pusat', pair(params.centerX, params.centerY)]];
+            case 'dilation': return [['faktor', num(params.factor)], ['pusat', pair(params.centerX, params.centerY)]];
+            case 'translation': return [['vektor', pair(params.tx, params.ty)]];
+            default: return [];
+        }
+    }
+
+    /** Baca parameter dari fungsi get(kunci); null bila tidak lengkap/tidak valid. */
+    function paramsFromGetter(type, get) {
+        switch (type) {
+            case 'reflection': {
+                const axis = get('garis');
+                if (!AXES.includes(axis)) return null;
+                const params = { axis, m: 1, c: 0, k: 0 };
+                if (axis === 'x=h' || axis === 'y=k') {
+                    params.k = readNumber(get('nilai'));
+                    if (params.k === null) return null;
+                }
+                if (axis === 'custom') {
+                    params.m = readNumber(get('m'));
+                    params.c = readNumber(get('c'));
+                    if (params.m === null || params.c === null) return null;
+                }
+                return params;
+            }
+            case 'rotation': {
+                const angle = readNumber(get('sudut'));
+                const center = readPair(get('pusat'));
+                return angle === null || !center ? null : { angle, centerX: center.x, centerY: center.y };
+            }
+            case 'dilation': {
+                const factor = readNumber(get('faktor'));
+                const center = readPair(get('pusat'));
+                return factor === null || factor === 0 || !center ? null : { factor, centerX: center.x, centerY: center.y };
+            }
+            case 'translation': {
+                const vector = readPair(get('vektor'));
+                return vector ? { tx: vector.x, ty: vector.y } : null;
+            }
+            default:
+                return null;
+        }
+    }
+
+    // Satu langkah komposisi: "rotasi:sudut=90:pusat=0,0"; antarlangkah dipisah "~".
+    function encodeStep(step) {
+        return [STEP_NAMES[step.transform], ...paramsToEntries(step.transform, step.params).map(([k, v]) => `${k}=${v}`)].join(':');
+    }
+
+    function decodeStep(text) {
+        const [name, ...fields] = text.split(':');
+        const type = Object.keys(STEP_NAMES).find(key => STEP_NAMES[key] === name);
+        if (!type) return null;
+        const values = {};
+        fields.forEach(field => {
+            const at = field.indexOf('=');
+            if (at > 0) values[field.slice(0, at)] = field.slice(at + 1);
+        });
+        const params = paramsFromGetter(type, key => values[key] ?? null);
+        return params ? { transform: type, params } : null;
+    }
+
+    /**
+     * state = { points, closed, transform, params, applied, steps }. Bila ada
+     * langkah komposisi, `points` adalah bentuk awal (sebelum langkah pertama).
+     * Mengembalikan query tanpa "?" (kosong bila belum ada titik).
+     */
+    function encodeState(state) {
+        if (!state.points.length) return '';
+        const entries = [['titik', state.points.map(p => pair(p.x, p.y)).join(';')]];
+        if (state.closed) entries.push(['tutup', '1']);
+        if (state.steps && state.steps.length) entries.push(['langkah', state.steps.map(encodeStep).join('~')]);
+        entries.push(...paramsToEntries(state.transform, state.params));
+        if (state.applied) entries.push(['hasil', '1']);
+        // , ; : = sah di query URL, jadi dibiarkan agar tautan tetap terbaca.
+        const encode = (text) => encodeURIComponent(text).replace(/%2C/g, ',').replace(/%3B/g, ';')
+            .replace(/%3A/g, ':').replace(/%3D/g, '=');
+        return entries.map(([key, value]) => `${key}=${encode(value)}`).join('&');
+    }
+
+    /** Kebalikan encodeState untuk jenis `transform` dari hash; null bila tidak ada titik valid. */
+    function decodeState(search, transform) {
+        const query = new URLSearchParams(search);
+        const pointText = query.get('titik');
+        if (!pointText) return null;
+        const points = pointText.split(';').map(readPair);
+        if (!points.length || points.length > MAX_URL_POINTS || points.some(p => !p)) return null;
+
+        const stepText = query.get('langkah');
+        const steps = stepText ? stepText.split('~').map(decodeStep) : [];
+        if (steps.length > MAX_URL_STEPS || steps.some(step => !step)) return null;
+
+        const params = paramsFromGetter(transform, key => query.get(key));
+        return {
+            points,
+            closed: query.get('tutup') === '1' && points.length >= 3,
+            transform,
+            params,
+            applied: Boolean(params) && query.get('hasil') === '1',
+            steps
+        };
+    }
+
     // ==================== KONVERSI KOORDINAT ====================
     // view = { width, height, scale, offsetX, offsetY }; sumbu Y layar terbalik.
 
@@ -417,7 +556,8 @@
     const api = {
         parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, describeLine,
         worldToScreen, screenToWorld, createHistory, snapshotTransform, placeLabels, boxesOverlap,
-        affineCoefficients, formatLinear, formatAffineRule, affineMatrix, generalRule, createQuestion, checkAnswer
+        affineCoefficients, formatLinear, formatAffineRule, affineMatrix, generalRule, createQuestion, checkAnswer,
+        encodeState, decodeState
     };
     global.AppUtils = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;

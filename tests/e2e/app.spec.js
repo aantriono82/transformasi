@@ -453,3 +453,55 @@ test('komposisi: refleksi lalu rotasi, undo, dan kembali ke bentuk awal', async 
     expect(await readTable(page)).toEqual([['P1', '(2, 3)', '-']]);
     await expect(page.locator('#compositionRow')).toBeHidden();
 });
+
+test('URL menyimpan keadaan; tautan membuka bentuk dan hasil yang sama', async ({ page, context }) => {
+    await page.locator('#tab-rotation').click();
+    await page.locator('#rotationCenterX').fill('1');
+    await page.locator('#sampleShape').click();
+    await page.locator('#applyTransform').click();
+    await expect(page).toHaveURL(/\?titik=.*&tutup=1&sudut=90&pusat=1,0&hasil=1#rotasi$/);
+    const rows = await readTable(page);
+
+    const other = await context.newPage();
+    await other.goto(page.url());
+    await expect(other.locator('#tab-rotation')).toHaveAttribute('aria-selected', 'true');
+    await expect(other.locator('#rotationCenterX')).toHaveValue('1');
+    expect(await readTable(other)).toEqual(rows);
+    await expect(other.locator('#srAnnouncer')).toHaveText('Bentuk dari tautan dimuat');
+    expect(await other.evaluate(() => isPolygonClosed)).toBe(true);
+});
+
+test('URL menyimpan komposisi; menghapus semua titik membersihkan URL', async ({ page, context }) => {
+    await page.locator('#manualPointInput').fill('(2, 3)');
+    await page.locator('#addManualPoint').click();
+    await page.locator('#applyTransform').click();
+    await page.locator('#chainTransform').click();
+    await page.locator('#tab-rotation').click();
+    await page.locator('#applyTransform').click();
+    await expect(page).toHaveURL(/langkah=refleksi:garis=x&sudut=90&pusat=0,0&hasil=1#rotasi$/);
+
+    const other = await context.newPage();
+    await other.goto(page.url());
+    expect(await readTable(other)).toEqual([["P'1", '(2, -3)', '(3, 2)']]);
+    await expect(other.locator('#compositionRule')).toHaveText('(x, y) → (y, x)');
+
+    await page.locator('#clearPoints').click();
+    await expect(page).toHaveURL(/\/#rotasi$/);
+});
+
+test('tautan rusak diabaikan tanpa error', async ({ page }) => {
+    await page.goto('./?titik=abc&sudut=zzz#rotasi');
+    expect(await readTable(page)).toEqual([['Belum ada titik. Klik kanvas atau gunakan input manual di atas.']]);
+    await page.goto('./?titik=1,2&faktor=0&pusat=0,0&hasil=1#dilatasi');
+    expect(await readTable(page)).toEqual([['P1', '(1, 2)', '-']]);
+});
+
+test('tombol salin tautan bentuk menyalin URL keadaan', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.locator('.shape-chip[data-preset="triangle"]').click();
+    await page.locator('#copyShapeLink').click();
+    await expect(page.locator('#srAnnouncer')).toHaveText('Tautan bentuk ini berhasil disalin');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toContain('?titik=-3,-2;0,4;3,-2&tutup=1');
+    expect(copied).toBe(page.url());
+});
