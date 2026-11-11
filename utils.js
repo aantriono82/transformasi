@@ -139,6 +139,153 @@
         }
     }
 
+    // ==================== RUMUS TRANSFORMASI ====================
+
+    /**
+     * Semua transformasi di aplikasi ini affine: x' = a·x + b·y + e dan
+     * y' = c·x + d·y + f. Koefisiennya dibaca dari peta tiga titik acuan.
+     */
+    function affineCoefficients(map) {
+        const o = map({ x: 0, y: 0 });
+        const ex = map({ x: 1, y: 0 });
+        const ey = map({ x: 0, y: 1 });
+        return { a: ex.x - o.x, b: ey.x - o.x, e: o.x, c: ex.y - o.y, d: ey.y - o.y, f: o.y };
+    }
+
+    const round2 = (value) => Math.round(value * 100) / 100;
+
+    /** Ekspresi linear yang rapi, mis. "-x + 2y - 3" atau "0". */
+    function formatLinear(coefX, coefY, constant) {
+        const terms = [];
+        const add = (coef, symbol) => {
+            const value = round2(coef);
+            if (value === 0) return;
+            const abs = Math.abs(value);
+            const body = symbol && abs === 1 ? symbol : `${formatCoordinate(abs)}${symbol}`;
+            terms.push({ negative: value < 0, body });
+        };
+        add(coefX, 'x');
+        add(coefY, 'y');
+        add(constant, '');
+        if (!terms.length) return '0';
+        return terms.map((term, i) => {
+            if (i === 0) return (term.negative ? '-' : '') + term.body;
+            return (term.negative ? ' - ' : ' + ') + term.body;
+        }).join('');
+    }
+
+    /** Aturan dengan angka, mis. "(x, y) → (-y, x)"; diawali "≈" bila dibulatkan. */
+    function formatAffineRule(k) {
+        const exact = [k.a, k.b, k.c, k.d, k.e, k.f].every(v => Math.abs(v - round2(v)) < 1e-9);
+        return `(x, y) → ${exact ? '' : '≈ '}(${formatLinear(k.a, k.b, k.e)}, ${formatLinear(k.c, k.d, k.f)})`;
+    }
+
+    /** Rumus umum (simbolik) beserta keterangan nilai simbolnya. */
+    function generalRule(type, params = {}) {
+        const point = (x, y) => `(${formatCoordinate(x)}, ${formatCoordinate(y)})`;
+        switch (type) {
+            case 'reflection': {
+                const { axis = 'x', m = 1, c = 0, k = 0 } = params;
+                const rules = {
+                    x: '(x, y) → (x, -y)',
+                    y: '(x, y) → (-x, y)',
+                    'y=x': '(x, y) → (y, x)',
+                    'y=-x': '(x, y) → (-y, -x)'
+                };
+                if (rules[axis]) return { rule: rules[axis], note: '' };
+                if (axis === 'x=h') return { rule: '(x, y) → (2h - x, y)', note: `h = ${formatCoordinate(k)}` };
+                if (axis === 'y=k') return { rule: '(x, y) → (x, 2k - y)', note: `k = ${formatCoordinate(k)}` };
+                return {
+                    rule: "x' = [(1 - m²)x + 2m(y - c)] / (1 + m²),  y' = [2mx + (m² - 1)(y - c)] / (1 + m²) + c",
+                    note: `m = ${formatCoordinate(m)}, c = ${formatCoordinate(c)}`
+                };
+            }
+            case 'rotation': {
+                const { angle = 0, centerX = 0, centerY = 0 } = params;
+                if (centerX === 0 && centerY === 0) {
+                    return { rule: '(x, y) → (x cos θ - y sin θ,  x sin θ + y cos θ)', note: `θ = ${formatCoordinate(angle)}°` };
+                }
+                return {
+                    rule: "x' = a + (x - a) cos θ - (y - b) sin θ,  y' = b + (x - a) sin θ + (y - b) cos θ",
+                    note: `pusat (a, b) = ${point(centerX, centerY)}, θ = ${formatCoordinate(angle)}°`
+                };
+            }
+            case 'dilation': {
+                const { factor = 1, centerX = 0, centerY = 0 } = params;
+                if (centerX === 0 && centerY === 0) return { rule: '(x, y) → (kx, ky)', note: `k = ${formatCoordinate(factor)}` };
+                return {
+                    rule: '(x, y) → (a + k(x - a),  b + k(y - b))',
+                    note: `pusat (a, b) = ${point(centerX, centerY)}, k = ${formatCoordinate(factor)}`
+                };
+            }
+            case 'translation': {
+                const { tx = 0, ty = 0 } = params;
+                return { rule: '(x, y) → (x + a, y + b)', note: `vektor (a, b) = ${point(tx, ty)}` };
+            }
+            default:
+                return { rule: '', note: '' };
+        }
+    }
+
+    // ==================== LATIHAN ====================
+
+    const geometry = global.GeometryTransformations
+        || (typeof require === 'function' ? require('./transformations.js') : null);
+
+    /**
+     * Soal acak: bayangan satu titik bulat oleh satu transformasi. Parameter
+     * dipilih agar jawabannya bulat atau setengah (mudah dihitung manual).
+     * `random` dapat diganti untuk tes yang deterministik.
+     */
+    function createQuestion(random = Math.random) {
+        const int = (min, max) => min + Math.floor(random() * (max - min + 1));
+        const pick = (items) => items[Math.floor(random() * items.length)];
+        const nonZero = (min, max) => {
+            const value = int(min, max - 1);
+            return value >= 0 ? value + 1 : value;
+        };
+
+        let point;
+        do {
+            point = { x: int(-6, 6), y: int(-6, 6) };
+        } while (point.x === 0 && point.y === 0);
+
+        const type = pick(['reflection', 'rotation', 'dilation', 'translation']);
+        const atOrigin = random() < 0.6;
+        const center = () => (atOrigin ? { centerX: 0, centerY: 0 } : { centerX: int(-2, 2), centerY: int(-2, 2) });
+        let params;
+        if (type === 'reflection') {
+            const axis = pick(['x', 'y', 'y=x', 'y=-x', 'x=h', 'y=k']);
+            params = { axis, m: 1, c: 0, k: axis === 'x=h' || axis === 'y=k' ? nonZero(-3, 3) : 0 };
+        } else if (type === 'rotation') {
+            params = { angle: pick([90, -90, 180, 270]), ...center() };
+        } else if (type === 'dilation') {
+            params = { factor: pick([2, 3, -1, -2, 0.5]), ...center() };
+        } else {
+            params = { tx: nonZero(-5, 5), ty: int(-5, 5) };
+        }
+
+        const answer = geometry.apply([point], type, params)[0];
+        const clean = (value) => (Object.is(round2(value), -0) ? 0 : round2(value));
+        const description = describeTransform(type, params);
+        return {
+            point,
+            type,
+            params,
+            answer: { x: clean(answer.x), y: clean(answer.y) },
+            text: `Tentukan bayangan titik A(${formatCoordinate(point.x)}, ${formatCoordinate(point.y)}) oleh `
+                + `${description.charAt(0).toLowerCase()}${description.slice(1)}.`
+        };
+    }
+
+    /** Periksa jawaban teks. valid=false bila formatnya tidak dapat dibaca. */
+    function checkAnswer(question, text) {
+        const parsed = parsePointInput(text);
+        if (!parsed) return { valid: false, correct: false };
+        const close = (a, b) => Math.abs(a - b) < 0.011;
+        return { valid: true, correct: close(parsed.x, question.answer.x) && close(parsed.y, question.answer.y) };
+    }
+
     // ==================== KONVERSI KOORDINAT ====================
     // view = { width, height, scale, offsetX, offsetY }; sumbu Y layar terbalik.
 
@@ -257,7 +404,8 @@
 
     const api = {
         parsePointInput, formatCoordinate, niceStep, wheelZoomFactor, fitView, describeTransform, describeLine,
-        worldToScreen, screenToWorld, createHistory, snapshotTransform, placeLabels, boxesOverlap
+        worldToScreen, screenToWorld, createHistory, snapshotTransform, placeLabels, boxesOverlap,
+        affineCoefficients, formatLinear, formatAffineRule, generalRule, createQuestion, checkAnswer
     };
     global.AppUtils = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
